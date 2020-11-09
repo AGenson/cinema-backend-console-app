@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    data: storage/data.sql
+
+  jpa:
+    open-in-view: false

@@ -1,8 +1,21 @@
+logging:
+  level:
+    root: error
+
 spring:
   main:
     banner-mode: off
     web-application-type: none
 
-logging:
-  level:
-    root: error
+  datasource:
+    url: jdbc:h2:mem:db
+    driverClassName: org.h2.Driver
+    username: admin
+    password: password
+    initialization-mode: always
+    schema: storage/schema.sql
+
+  jpa:
+    databasePlatform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: none

@@ -1,0 +1,4 @@
+INSERT INTO movie (uuid, title) VALUES
+    ('efa6e994-11cd-439f-9106-e6ba1033d107', 'E.T. THE EXTRA-TERRESTRIAL'),
+    ('a63f583d-c6fc-4ed3-8620-8235a04bc2c6', 'READY PLAYER ONE'),
+    ('8b302fcb-9dfc-4035-b43e-83843e9020d4', 'JURASSIC PARK');

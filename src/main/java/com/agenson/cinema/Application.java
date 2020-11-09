@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CinemaApplication {
+public class Application {
 
 	public static void main(String[] args) {
-		SpringApplication.run(CinemaApplication.class, args).close();
+		SpringApplication.run(Application.class, args).close();
 	}
 }
