@@ -1,6 +1,7 @@
 package com.agenson.cinema.movie;
 
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +14,8 @@ import java.util.stream.Collectors;
 public class MovieService {
 
     private final MovieRepository movieRepository;
+
+    private final ModelMapper mapper;
 
     public Optional<MovieDTO> findMovie(UUID uuid) {
         return this.movieRepository.findByUuid(uuid).map(this::toDTO);
@@ -50,7 +53,7 @@ public class MovieService {
     }
 
     protected MovieDTO toDTO(MovieDB movie) {
-        return movie != null ? MovieDTO.from(movie) : null;
+        return this.mapper.map(movie, MovieDTO.class);
     }
 
     private String formatTitle(String title) {

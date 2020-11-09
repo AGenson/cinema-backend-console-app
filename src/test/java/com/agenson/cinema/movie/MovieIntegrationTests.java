@@ -1,6 +1,7 @@
 package com.agenson.cinema.movie;
 
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -21,6 +22,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class MovieIntegrationTests implements TitleConstants {
 
     @Autowired
+    private ModelMapper mapper;
+
+    @Autowired
     private MovieRepository movieRepository;
 
     @Autowired
@@ -29,7 +33,8 @@ public class MovieIntegrationTests implements TitleConstants {
     @Test
     public void createOrUpdateMovie_ShouldReturnPersistedMovie_WhenGivenTitle() {
         MovieDTO expected = this.movieService.createOrUpdateMovie(null, NORMAL_TITLE);
-        Optional<MovieDTO> actual = this.movieRepository.findByUuid(expected.getUuid()).map(MovieDTO::from);
+        Optional<MovieDTO> actual = this.movieRepository.findByUuid(expected.getUuid())
+                .map(movie -> this.mapper.map(movie, MovieDTO.class));
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -51,7 +56,7 @@ public class MovieIntegrationTests implements TitleConstants {
     public void findMovie_ShouldReturnPersistedMovie_WhenGivenUuid() {
         MovieDB movie = movieRepository.save(new MovieDB(NORMAL_TITLE));
 
-        MovieDTO expected = MovieDTO.from(movie);
+        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
         Optional<MovieDTO> actual = movieService.findMovie(movie.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -62,7 +67,7 @@ public class MovieIntegrationTests implements TitleConstants {
     public void findMovie_ShouldReturnPersistedMovie_WhenGivenTitle() {
         MovieDB movie = movieRepository.save(new MovieDB(NORMAL_TITLE));
 
-        MovieDTO expected = MovieDTO.from(movie);
+        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
         Optional<MovieDTO> actual = movieService.findMovie(movie.getTitle());
 
         assertThat(actual.isPresent()).isTrue();
@@ -85,8 +90,10 @@ public class MovieIntegrationTests implements TitleConstants {
 
         this.movieRepository.saveAll(movieList);
 
-        List<MovieDTO> expected = movieList.stream().map(MovieDTO::from).collect(Collectors.toList());;
         List<MovieDTO> actual = this.movieService.findMovies();
+        List<MovieDTO> expected = movieList.stream()
+                .map(movie -> this.mapper.map(movie, MovieDTO.class))
+                .collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
