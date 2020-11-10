@@ -2,6 +2,8 @@ package com.agenson.cinema;
 
 import com.agenson.cinema.movie.MovieDTO;
 import com.agenson.cinema.movie.MovieService;
+import com.agenson.cinema.room.RoomDTO;
+import com.agenson.cinema.room.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -16,6 +18,8 @@ public class ConsoleIO implements CommandLineRunner {
 
     private final MovieService movieService;
 
+    private final RoomService roomService;
+
     @Override
     public void run(String... args) {
         Scanner sc = new Scanner(System.in);
@@ -28,5 +32,10 @@ public class ConsoleIO implements CommandLineRunner {
 
         for (MovieDTO movie : movieService.findMovies())
             System.out.println(movie);
+
+        System.out.println("\nRooms:");
+
+        for (RoomDTO room : roomService.findRooms())
+            System.out.println(room);
     }
 }
