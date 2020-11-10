@@ -29,23 +29,19 @@ public class MovieService {
         return this.movieRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public MovieDTO createOrUpdateMovie(UUID uuid, String title) {
-        MovieDB movie = this.movieRepository.findByUuid(uuid).orElse(new MovieDB());
-        String formattedTitle = this.formatTitle(title);
+    public MovieDTO createMovie(String title) {
+        this.validateTitle(null, title);
 
-        if (title == null) throw new InvalidMovieException(InvalidMovieException.Type.MANDATORY);
-        else if (formattedTitle.length() == 0) throw new InvalidMovieException(InvalidMovieException.Type.MANDATORY);
-        else if (formattedTitle.length() > 32) throw new InvalidMovieException(InvalidMovieException.Type.MAXSIZE);
-        else {
-            this.movieRepository.findByTitle(formattedTitle).ifPresent(movieWithSameTitle -> {
-                if (movieWithSameTitle.getUuid() != movie.getUuid())
-                    throw new InvalidMovieException(InvalidMovieException.Type.EXISTS);
-            });
-        }
+        return this.toDTO(this.movieRepository.save(new MovieDB(this.formatTitle(title))));
+    }
 
-        movie.setTitle(formattedTitle);
+    public Optional<MovieDTO> updateMovieTitle(UUID uuid, String title) {
+        return this.movieRepository.findByUuid(uuid).map(movie -> {
+            this.validateTitle(uuid, title);
+            movie.setTitle(this.formatTitle(title));
 
-        return this.toDTO(this.movieRepository.save(movie));
+            return this.toDTO(this.movieRepository.save(movie));
+        });
     }
 
     public void removeMovie(UUID uuid) {
@@ -54,6 +50,20 @@ public class MovieService {
 
     protected MovieDTO toDTO(MovieDB movie) {
         return this.mapper.map(movie, MovieDTO.class);
+    }
+
+    private void validateTitle(UUID uuid, String title) {
+        String formattedTitle = this.formatTitle(title);
+
+        if (formattedTitle == null) throw new InvalidMovieException(InvalidMovieException.Type.MANDATORY);
+        else if (formattedTitle.length() == 0) throw new InvalidMovieException(InvalidMovieException.Type.MANDATORY);
+        else if (formattedTitle.length() > 32) throw new InvalidMovieException(InvalidMovieException.Type.MAXSIZE);
+        else {
+            this.movieRepository.findByTitle(formattedTitle).ifPresent(movieWithSameTitle -> {
+                if (uuid == null || movieWithSameTitle.getUuid() != uuid)
+                    throw new InvalidMovieException(InvalidMovieException.Type.EXISTS);
+            });
+        }
     }
 
     private String formatTitle(String title) {

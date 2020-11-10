@@ -1,5 +1,6 @@
 package com.agenson.cinema.movie;
 
+import com.agenson.cinema.utils.CallableOneArgument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,14 +22,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class MovieServiceUnitTests implements TitleConstants {
+class MovieServiceUnitTests implements MovieConstants {
 
-    private static final HashMap<String, InvalidMovieException.Type> INVALID_MOVIE_EXCEPTION_SCENARIOS =
+    private static final HashMap<String, InvalidMovieException.Type> INVALID_MOVIE_TITLES =
             new HashMap<String, InvalidMovieException.Type>() {{
                 put(null, InvalidMovieException.Type.MANDATORY);
-                put(TitleConstants.EMPTY_TITLE, InvalidMovieException.Type.MANDATORY);
-                put(TitleConstants.MAX_SIZE_TITLE, InvalidMovieException.Type.MAXSIZE);
-                put(TitleConstants.NORMAL_TITLE, InvalidMovieException.Type.EXISTS);
+                put(MovieConstants.EMPTY_TITLE, InvalidMovieException.Type.MANDATORY);
+                put(MovieConstants.MAX_SIZE_TITLE, InvalidMovieException.Type.MAXSIZE);
+                put(MovieConstants.ANOTHER_TITLE, InvalidMovieException.Type.EXISTS);
             }};
 
     @Mock
@@ -51,42 +52,31 @@ class MovieServiceUnitTests implements TitleConstants {
     }
 
     @Test
-    public void findMovie_ShouldReturnMovie_WhenGivenUuid() {
+    public void findMovie_ShouldReturnMovie_WhenGivenUuidOrTitle() {
         MovieDB movie = new MovieDB(NORMAL_TITLE);
 
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
+        when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
 
         MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
         Optional<MovieDTO> actual = this.movieService.findMovie(movie.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
-    }
 
-    @Test
-    public void findMovie_ShouldReturnNull_WhenGivenUnknownUuid() {
-        when(this.movieRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
-
-        assertThat(this.movieService.findMovie(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.movieService.findMovie((UUID) null).isPresent()).isFalse();
-    }
-
-    @Test
-    public void findMovie_ShouldReturnMovie_WhenGivenTitle() {
-        MovieDB movie = new MovieDB(NORMAL_TITLE);
-
-        when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
-
-        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
-        Optional<MovieDTO> actual = this.movieService.findMovie(movie.getTitle());
+        actual = this.movieService.findMovie(movie.getTitle());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void findMovie_ShouldReturnNull_WhenGivenUnknownTitle() {
+    public void findMovie_ShouldReturnNull_WhenGivenUnknownUuidOrTitle() {
+        when(this.movieRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
         when(this.movieRepository.findByTitle(anyString())).thenReturn(Optional.empty());
+
+        assertThat(this.movieService.findMovie(UUID.randomUUID()).isPresent()).isFalse();
+        assertThat(this.movieService.findMovie((UUID) null).isPresent()).isFalse();
 
         assertThat(this.movieService.findMovie(UNKNOWN_TITLE).isPresent()).isFalse();
         assertThat(this.movieService.findMovie((String) null).isPresent()).isFalse();
@@ -110,19 +100,25 @@ class MovieServiceUnitTests implements TitleConstants {
     }
 
     @Test
-    public void createOrUpdateMovie_ShouldReturnNewMovieWithUppercaseTitle_WhenGivenLowercaseTitle() {
-        when(this.movieRepository.save(any(MovieDB.class))).then(returnsFirstArg());
-        when(this.movieRepository.findByUuid(null)).thenReturn(Optional.empty());
+    public void createMovie_ShouldReturnMovieWithUppercaseTitle_WhenGivenLowercaseTitle() {
         when(this.movieRepository.findByTitle(NORMAL_TITLE)).thenReturn(Optional.empty());
+        when(this.movieRepository.save(any(MovieDB.class))).then(returnsFirstArg());
 
-        MovieDTO actual = this.movieService.createOrUpdateMovie(null, NORMAL_TITLE.toLowerCase());
+        MovieDTO actual = this.movieService.createMovie(NORMAL_TITLE.toLowerCase());
 
         assertThat(actual.getUuid()).isNotNull();
         assertThat(actual.getTitle()).isEqualTo(NORMAL_TITLE);
     }
 
     @Test
-    public void createOrUpdateMovie_ShouldReturnUnmodifiedMovie_WhenGivenUuidAndLowercaseTitle() {
+    public void createMovie_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidTitle() {
+        this.assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(title -> {
+            this.movieService.createMovie(title);
+        });
+    }
+
+    @Test
+    public void updateMovieTitle_ShouldReturnUnmodifiedMovie_WhenGivenUuidAndLowercaseTitle() {
         MovieDB movie = new MovieDB(NORMAL_TITLE);
 
         when(this.movieRepository.save(any(MovieDB.class))).then(returnsFirstArg());
@@ -130,22 +126,32 @@ class MovieServiceUnitTests implements TitleConstants {
         when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
 
         MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
-        MovieDTO actual = this.movieService.createOrUpdateMovie(expected.getUuid(), NORMAL_TITLE.toLowerCase());
+        Optional<MovieDTO> actual = this.movieService.updateMovieTitle(expected.getUuid(), NORMAL_TITLE.toLowerCase());
 
-        assertThat(actual).isEqualTo(expected);
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void createOrUpdateMovie_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidTitle() {
-        when(this.movieRepository.findByUuid(null)).thenReturn(Optional.empty());
+    public void updateMovieTitle_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidTitle() {
+        MovieDB movie = new MovieDB(NORMAL_TITLE);
+
+        when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
+
+        this.assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(title -> {
+            this.movieService.updateMovieTitle(movie.getUuid(), title);
+        });
+    }
+
+    private void assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(CallableOneArgument<String> callable) {
         when(this.movieRepository.findByTitle(anyString())).thenAnswer(invocation -> {
             MovieDB movieWithSameTitle = new MovieDB(invocation.getArgument(0));
             return Optional.of(movieWithSameTitle);
         });
 
-        for (Map.Entry<String, InvalidMovieException.Type> entry : INVALID_MOVIE_EXCEPTION_SCENARIOS.entrySet())
+        for (Map.Entry<String, InvalidMovieException.Type> pair : INVALID_MOVIE_TITLES.entrySet())
             assertThatExceptionOfType(InvalidMovieException.class)
-                    .isThrownBy(() -> this.movieService.createOrUpdateMovie(null, entry.getKey()))
-                    .withMessage(entry.getValue().toString());
+                    .isThrownBy(() -> callable.call(pair.getKey()))
+                    .withMessage(pair.getValue().toString());
     }
 }

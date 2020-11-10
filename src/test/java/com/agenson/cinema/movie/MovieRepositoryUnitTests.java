@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -14,8 +15,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
-class MovieRepositoryUnitTests implements TitleConstants {
+class MovieRepositoryUnitTests implements MovieConstants {
 
     @Autowired
     private TestEntityManager entityManager;
@@ -31,26 +33,11 @@ class MovieRepositoryUnitTests implements TitleConstants {
     }
 
     @Test
-    public void findByTitle_ShouldReturnMovie_WhenGivenPersistedTitle() {
-        Optional<MovieDB> actual = this.movieRepository.findByTitle(expected.getTitle());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void findByTitle_ShouldReturnNull_WhenGivenUnknownTitle() {
-        Optional<MovieDB> actual = this.movieRepository.findByTitle(UNKNOWN_TITLE);
-
-        assertThat(actual.isPresent()).isFalse();
-    }
-
-    @Test
     public void findByUuid_ShouldReturnMovie_WhenGivenPersistedUuid() {
-        Optional<MovieDB> actual = this.movieRepository.findByUuid(expected.getUuid());
+        Optional<MovieDB> actual = this.movieRepository.findByUuid(this.expected.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        assertThat(actual.get()).isEqualTo(this.expected);
     }
 
     @Test
@@ -61,10 +48,25 @@ class MovieRepositoryUnitTests implements TitleConstants {
     }
 
     @Test
-    public void deleteByUuid_ShouldDeleteMovie_WhenGivenUuid() {
-        this.movieRepository.deleteByUuid(expected.getUuid());
+    public void findByTitle_ShouldReturnMovie_WhenGivenPersistedTitle() {
+        Optional<MovieDB> actual = this.movieRepository.findByTitle(this.expected.getTitle());
 
-        Optional<MovieDB> actual = movieRepository.findByUuid(expected.getUuid());
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(this.expected);
+    }
+
+    @Test
+    public void findByTitle_ShouldReturnNull_WhenGivenUnknownTitle() {
+        Optional<MovieDB> actual = this.movieRepository.findByTitle(UNKNOWN_TITLE);
+
+        assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void deleteByUuid_ShouldDeleteMovie_WhenGivenUuid() {
+        this.movieRepository.deleteByUuid(this.expected.getUuid());
+
+        Optional<MovieDB> actual = this.movieRepository.findById(this.expected.getId());
 
         assertThat(actual.isPresent()).isFalse();
     }

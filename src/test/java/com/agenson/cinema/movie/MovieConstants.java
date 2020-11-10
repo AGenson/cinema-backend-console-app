@@ -1,6 +1,6 @@
 package com.agenson.cinema.movie;
 
-public interface TitleConstants {
+public interface MovieConstants {
 
     String NORMAL_TITLE = "A NORMAL TITLE";
     String ANOTHER_TITLE = "ANOTHER TITLE";
