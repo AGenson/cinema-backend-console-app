@@ -27,9 +27,9 @@ class MovieServiceUnitTests implements MovieConstants {
     private static final HashMap<String, InvalidMovieException.Type> INVALID_MOVIE_TITLES =
             new HashMap<String, InvalidMovieException.Type>() {{
                 put(null, InvalidMovieException.Type.MANDATORY);
-                put(MovieConstants.EMPTY_TITLE, InvalidMovieException.Type.MANDATORY);
-                put(MovieConstants.MAX_SIZE_TITLE, InvalidMovieException.Type.MAXSIZE);
-                put(MovieConstants.ANOTHER_TITLE, InvalidMovieException.Type.EXISTS);
+                put(EMPTY_TITLE, InvalidMovieException.Type.MANDATORY);
+                put(MAX_SIZE_TITLE, InvalidMovieException.Type.MAXSIZE);
+                put(ANOTHER_TITLE, InvalidMovieException.Type.EXISTS);
             }};
 
     @Mock
@@ -146,6 +146,7 @@ class MovieServiceUnitTests implements MovieConstants {
     private void assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(CallableOneArgument<String> callable) {
         when(this.movieRepository.findByTitle(anyString())).thenAnswer(invocation -> {
             MovieDB movieWithSameTitle = new MovieDB(invocation.getArgument(0));
+
             return Optional.of(movieWithSameTitle);
         });
 

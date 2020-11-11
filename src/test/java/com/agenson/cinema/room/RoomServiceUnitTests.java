@@ -183,11 +183,12 @@ public class RoomServiceUnitTests implements RoomConstants {
 
     @Test
     public void updateRoomNumber_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidRoomNumber() {
-        when(this.roomRepository.findByUuid(any(UUID.class)))
-                .thenReturn(Optional.of(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)));
+        RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+
+        when(this.roomRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(room));
 
         this.assertThrowsInvalidRoomException_WhenGivenInvalidRoomNumber(number -> {
-            this.roomService.updateRoomNumber(UUID.randomUUID(), number);
+            this.roomService.updateRoomNumber(room.getUuid(), number);
         });
     }
 
@@ -211,11 +212,12 @@ public class RoomServiceUnitTests implements RoomConstants {
 
     @Test
     public void updateRoomCapacity_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidRoomCapacity() {
-        when(this.roomRepository.findByUuid(any(UUID.class)))
-                .thenReturn(Optional.of(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)));
+        RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+
+        when(this.roomRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(room));
 
         this.assertThrowsInvalidRoomException_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
-            this.roomService.updateRoomCapacity(UUID.randomUUID(), nbRows, nbCols);
+            this.roomService.updateRoomCapacity(room.getUuid(), nbRows, nbCols);
         });
     }
 
@@ -250,8 +252,9 @@ public class RoomServiceUnitTests implements RoomConstants {
 
     private void assertThrowsInvalidRoomException_WhenGivenInvalidRoomNumber(CallableOneArgument<Integer> callable) {
         when(this.roomRepository.findByNumber(anyInt())).thenAnswer(invocation -> {
-            RoomDB room = new RoomDB(invocation.getArgument(0), NORMAL_ROWS, NORMAL_COLS);
-            return Optional.of(room);
+            RoomDB roomWithSameNumber = new RoomDB(invocation.getArgument(0), NORMAL_ROWS, NORMAL_COLS);
+
+            return Optional.of(roomWithSameNumber);
         });
 
         for(Map.Entry<Integer, InvalidRoomException.Type> pair : INVALID_ROOM_NUMBERS.entrySet())

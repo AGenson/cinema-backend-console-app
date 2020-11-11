@@ -180,11 +180,12 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserUsername_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidUsername() {
-        when(this.userRepository.findByUuid(any(UUID.class)))
-                .thenReturn(Optional.of(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD)));
+        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+
+        when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
 
         this.assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(username -> {
-            this.userService.updateUserUsername(UUID.randomUUID(), username);
+            this.userService.updateUserUsername(user.getUuid(), username);
         });
     }
 
@@ -204,11 +205,12 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserPassword_ShouldThrowAssociatedInvalidUserException_WhenGivenInvalidPassword() {
-        when(this.userRepository.findByUuid(any(UUID.class)))
-                .thenReturn(Optional.of(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD)));
+        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+
+        when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
 
         this.assertShouldThrowInvalidUserException_WhenGivenInvalidPassword(password -> {
-            this.userService.updateUserPassword(UUID.randomUUID(), password);
+            this.userService.updateUserPassword(user.getUuid(), password);
         });
     }
 
@@ -229,6 +231,7 @@ public class UserServiceUnitTests implements UserConstants {
     private void assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(CallableOneArgument<String> callable) {
         when(this.userRepository.findByUsername(anyString())).thenAnswer(invocation -> {
             UserDB userWithSameUsername = new UserDB(invocation.getArgument(0), NORMAL_PASSWORD);
+
             return Optional.of(userWithSameUsername);
         });
 

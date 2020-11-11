@@ -18,8 +18,8 @@ public class MovieDB {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    protected Long id = -1L;
-    protected UUID uuid = UUID.randomUUID();
+    private Long id = -1L;
+    private UUID uuid = UUID.randomUUID();
     private String title = "";
 
     @ToString.Exclude

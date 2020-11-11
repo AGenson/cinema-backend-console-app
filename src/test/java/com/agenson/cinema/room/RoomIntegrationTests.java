@@ -46,7 +46,7 @@ public class RoomIntegrationTests implements RoomConstants {
     private RoomService roomService;
 
     @Test
-    public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuid() {
+    public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuidOrRoomNumber() {
         RoomDB room = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS));
 
         RoomDTO expected = this.mapper.map(room, RoomDTO.class);
@@ -62,7 +62,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void findMovie_ShouldReturnNull_WhenNotFoundWithUuidOrNumber() {
+    public void findMovie_ShouldReturnNull_WhenNotFoundWithUuidOrRoomNumber() {
         assertThat(this.roomRepository.findByUuid(UUID.randomUUID()).isPresent()).isFalse();
         assertThat(this.roomRepository.findByNumber(UNKNOWN_NUMBER).isPresent()).isFalse();
     }
