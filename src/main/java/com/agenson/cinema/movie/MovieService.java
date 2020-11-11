@@ -48,7 +48,7 @@ public class MovieService {
         this.movieRepository.deleteByUuid(uuid);
     }
 
-    protected MovieDTO toDTO(MovieDB movie) {
+    private MovieDTO toDTO(MovieDB movie) {
         return this.mapper.map(movie, MovieDTO.class);
     }
 

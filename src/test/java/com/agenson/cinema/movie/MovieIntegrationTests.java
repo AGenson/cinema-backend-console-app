@@ -113,12 +113,11 @@ public class MovieIntegrationTests implements MovieConstants {
 
     @Test
     public void removeMovie_ShouldRemoveMovie_WhenGivenUuid() {
-        MovieDB movie = this.movieRepository.save(new MovieDB(NORMAL_TITLE));
+        UUID uuid = this.movieRepository.save(new MovieDB(NORMAL_TITLE)).getUuid();
 
-        this.movieService.removeMovie(movie.getUuid());
-        Optional<MovieDB> actual = this.movieRepository.findByUuid(movie.getUuid());
+        this.movieService.removeMovie(uuid);
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(this.movieRepository.findByUuid(uuid).isPresent()).isFalse();
     }
 
     private void assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(CallableOneArgument<String> callable) {

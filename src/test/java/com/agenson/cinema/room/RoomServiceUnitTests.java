@@ -1,6 +1,8 @@
 package com.agenson.cinema.room;
 
+import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieDTO;
+import com.agenson.cinema.movie.MovieRepository;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.CallableTwoArguments;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +48,9 @@ public class RoomServiceUnitTests implements RoomConstants {
 
     @Mock
     private RoomRepository roomRepository;
+
+    @Mock
+    private MovieRepository movieRepository;
 
     @InjectMocks
     private RoomService roomService;
@@ -116,6 +121,25 @@ public class RoomServiceUnitTests implements RoomConstants {
     }
 
     @Test
+    public void findMovies_ShouldReturnFilteredRoomList_WhenGivenMovieUuid() {
+        RoomDB room1 = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+        RoomDB room2 = new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS+10, NORMAL_COLS+20);
+        MovieDB movie = new MovieDB("A NORMAL TITLE");
+
+        room1.setMovie(movie);
+        List<RoomDB> roomList = Arrays.asList(room1, room2);
+
+        movie.setRooms(roomList.stream().filter(room -> room.getMovie() == movie).collect(Collectors.toList()));
+        when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
+
+        List<RoomDTO> actual = this.roomService.findRooms(movie.getUuid());
+        List<RoomDTO> expected = Collections.singletonList(this.mapper.map(room1, RoomDTO.class));
+
+        assertThat(actual.size()).isEqualTo(expected.size());
+        assertThat(actual).containsOnlyOnceElementsOf(expected);
+    }
+
+    @Test
     public void createRoom_ShouldReturnNewRoom_WhenGivenRoomProperties() {
         when(this.roomRepository.save(any(RoomDB.class))).then(returnsFirstArg());
         when(this.roomRepository.findByNumber(anyInt())).thenReturn(Optional.empty());
@@ -158,7 +182,7 @@ public class RoomServiceUnitTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomNumber_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidProperties() {
+    public void updateRoomNumber_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidRoomNumber() {
         when(this.roomRepository.findByUuid(any(UUID.class)))
                 .thenReturn(Optional.of(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)));
 
@@ -186,13 +210,42 @@ public class RoomServiceUnitTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomCapacity_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidProperties() {
+    public void updateRoomCapacity_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidRoomCapacity() {
         when(this.roomRepository.findByUuid(any(UUID.class)))
                 .thenReturn(Optional.of(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)));
 
         this.assertThrowsInvalidRoomException_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
             this.roomService.updateRoomCapacity(UUID.randomUUID(), nbRows, nbCols);
         });
+    }
+
+    @Test
+    public void updateRoomMovie_ShouldReturnModifiedRoom_WhenGivenUuidAndMovieUuid() {
+        RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+        MovieDB movie = new MovieDB("A NORMAL TITLE");
+
+        when(this.roomRepository.save(any(RoomDB.class))).then(returnsFirstArg());
+        when(this.roomRepository.findByUuid(room.getUuid())).thenReturn(Optional.of(room));
+        when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
+
+        Optional<RoomDTO> actual = this.roomService.updateRoomMovie(room.getUuid(), movie.getUuid());
+        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
+        expected.setMovie(new MovieDTO(movie.getUuid(), movie.getTitle()));
+
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(expected);
+    }
+
+    @Test
+    public void updateRoomMovie_ShouldThrowAssociatedInvalidRoomException_WhenGivenInvalidMovieUuid() {
+        RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+
+        when(this.roomRepository.findByUuid(room.getUuid())).thenReturn(Optional.of(room));
+        when(this.movieRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThatExceptionOfType(InvalidRoomException.class)
+                .isThrownBy(() -> this.roomService.updateRoomMovie(room.getUuid(), UUID.randomUUID()))
+                .withMessage(InvalidRoomException.Type.MOVIE.toString());
     }
 
     private void assertThrowsInvalidRoomException_WhenGivenInvalidRoomNumber(CallableOneArgument<Integer> callable) {

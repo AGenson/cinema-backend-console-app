@@ -1,9 +1,12 @@
 package com.agenson.cinema.room;
 
+import com.agenson.cinema.movie.MovieDB;
+import com.agenson.cinema.movie.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +17,8 @@ import java.util.stream.Collectors;
 public class RoomService {
 
     private final RoomRepository roomRepository;
+
+    private final MovieRepository movieRepository;
 
     private final ModelMapper mapper;
 
@@ -27,6 +32,12 @@ public class RoomService {
 
     public List<RoomDTO> findRooms() {
         return this.roomRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    public List<RoomDTO> findRooms(UUID movieUuid) {
+        return this.movieRepository.findByUuid(movieUuid).map(MovieDB::getRooms)
+                .map(rooms -> rooms.stream().map(this::toDTO).collect(Collectors.toList()))
+                .orElse(Collections.emptyList());
     }
 
     public RoomDTO createRoom(int number, int nbRows, int nbCols) {
@@ -52,6 +63,18 @@ public class RoomService {
             movie.setNbCols(nbCols);
 
             return this.toDTO(this.roomRepository.save(movie));
+        });
+    }
+
+    public Optional<RoomDTO> updateRoomMovie(UUID uuid, UUID movieUuid) {
+        return this.roomRepository.findByUuid(uuid).map(room -> {
+            Optional<MovieDB> movie = this.movieRepository.findByUuid(movieUuid);
+
+            if (movie.isPresent()) {
+                room.setMovie(movie.get());
+
+                return this.toDTO(this.roomRepository.save(room));
+            } else throw new InvalidRoomException(InvalidRoomException.Type.MOVIE);
         });
     }
 

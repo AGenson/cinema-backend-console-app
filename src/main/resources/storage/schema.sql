@@ -13,5 +13,5 @@ CREATE TABLE room (
     number      INT             NOT NULL        UNIQUE,
     nb_rows     INT             NOT NULL,
     nb_cols     INT             NOT NULL,
-    movie_id    BIGINT                          REFERENCES movie(id)
+    movie_id    BIGINT                          REFERENCES movie(id) ON DELETE SET NULL
 );

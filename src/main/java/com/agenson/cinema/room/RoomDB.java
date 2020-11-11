@@ -21,7 +21,9 @@ public class RoomDB {
     private int nbRows = -1;
     private int nbCols = -1;
 
+    // SQL Foreign Key Constraint Definition: ON DELETE SET NULL
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "movie_id")
     private MovieDB movie = null;
 
     public RoomDB(int number, int nbRows, int nbCols) {

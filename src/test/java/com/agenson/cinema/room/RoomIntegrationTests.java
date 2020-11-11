@@ -1,5 +1,7 @@
 package com.agenson.cinema.room;
 
+import com.agenson.cinema.movie.MovieDB;
+import com.agenson.cinema.movie.MovieRepository;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.CallableTwoArguments;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +35,12 @@ public class RoomIntegrationTests implements RoomConstants {
 
     @Autowired
     private RoomRepository roomRepository;
+
+    @Autowired
+    private MovieRepository movieRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private RoomService roomService;
@@ -79,7 +88,24 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void createRoom_ShouldReturnPersistedRoom_WhenGivenProperties() {
+    public void findMovies_ShouldReturnFilteredRoomList_WhenGivenMovieUuid() {
+        RoomDB room1 = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+        RoomDB room2 = new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS+10, NORMAL_COLS+20);
+        MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
+
+        room1.setMovie(movie);
+        this.roomRepository.saveAll(Arrays.asList(room1, room2));
+        this.entityManager.refresh(movie);
+
+        List<RoomDTO> actual = this.roomService.findRooms(movie.getUuid());
+        List<RoomDTO> expected = Collections.singletonList(this.mapper.map(room1, RoomDTO.class));
+
+        assertThat(actual.size()).isEqualTo(expected.size());
+        assertThat(actual).containsOnlyOnceElementsOf(expected);
+    }
+
+    @Test
+    public void createRoom_ShouldReturnPersistedRoom_WhenGivenRoomProperties() {
         RoomDTO expected = this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
         Optional<RoomDTO> actual = this.roomRepository.findByUuid(expected.getUuid())
                 .map(room -> this.mapper.map(room, RoomDTO.class));
@@ -89,7 +115,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void createRoom_ShouldNotPersistRoom_WhenGivenInvalidProperties() {
+    public void createRoom_ShouldNotPersistRoom_WhenGivenInvalidRoomProperties() {
         this.assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(number -> {
             this.roomService.createRoom(number, NORMAL_ROWS, NORMAL_COLS);
         });
@@ -100,7 +126,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomNumber_ShouldReturnModifiedRoom_WhenGivenProperties() {
+    public void updateRoomNumber_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomNumber() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         Optional<RoomDTO> expected = this.roomService.updateRoomNumber(uuid, NORMAL_NUMBER+1);
@@ -111,7 +137,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomNumber_ShouldNotPersistRoom_WhenGivenInvalidProperties() {
+    public void updateRoomNumber_ShouldNotPersistRoom_WhenGivenInvalidRoomNumber() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         this.assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(number -> {
@@ -120,7 +146,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomCapacity_ShouldReturnModifiedRoom_WhenGivenProperties() {
+    public void updateRoomCapacity_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomCapacity() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         Optional<RoomDTO> expected = this.roomService.updateRoomCapacity(uuid, NORMAL_ROWS+10, NORMAL_COLS+20);
@@ -131,12 +157,42 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void updateRoomCapacity_ShouldNotPersistRoom_WhenGivenInvalidProperties() {
+    public void updateRoomCapacity_ShouldNotPersistRoom_WhenGivenInvalidRoomCapacity() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         this.assertShouldNotPersistRoom_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
             this.roomService.updateRoomCapacity(uuid, nbRows, nbCols);
         });
+    }
+
+    @Test
+    public void updateRoomMovie_ShouldReturnModifiedRoom_WhenGivenUuidAndMovieUuid() {
+        RoomDB room = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS));
+        MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
+
+        room.setMovie(movie);
+        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
+        Optional<RoomDTO> actual = this.roomService.updateRoomMovie(room.getUuid(), movie.getUuid());
+
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(expected);
+    }
+
+    @Test
+    public void updateRoomMovie_ShouldNotPersistRoom_WhenGivenInvalidMovieUuid() {
+        RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
+        MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
+
+        room.setMovie(movie);
+        RoomDB expected = this.roomRepository.save(room);
+
+        assertThatExceptionOfType(InvalidRoomException.class)
+                .isThrownBy(() -> this.roomService.updateRoomMovie(room.getUuid(), UUID.randomUUID()));
+
+        Optional<RoomDB> actual = this.roomRepository.findByUuid(room.getUuid());
+
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test

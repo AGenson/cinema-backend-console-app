@@ -1,5 +1,6 @@
 package com.agenson.cinema.movie;
 
+import com.agenson.cinema.room.RoomDB;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,5 +70,25 @@ class MovieRepositoryUnitTests implements MovieConstants {
         Optional<MovieDB> actual = this.movieRepository.findById(this.expected.getId());
 
         assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void deleteByUuid_ShouldSetForeignKeysToNull_WhenGivenUuid() {
+        RoomDB room = new RoomDB(1, 10, 20);
+
+        room.setMovie(this.expected);
+        room = this.entityManager.persist(room);
+
+        this.entityManager.refresh(this.expected);
+        this.entityManager.refresh(room);
+
+        assertThat(this.expected.getRooms()).containsOnly(room);
+        assertThat(room.getMovie()).isEqualTo(this.expected);
+
+        this.movieRepository.deleteByUuid(this.expected.getUuid());
+        this.entityManager.flush();
+        this.entityManager.refresh(room);
+
+        assertThat(room.getMovie()).isNull();
     }
 }
