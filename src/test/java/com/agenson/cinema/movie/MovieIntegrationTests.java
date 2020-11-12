@@ -1,10 +1,16 @@
 package com.agenson.cinema.movie;
 
+import com.agenson.cinema.security.SecurityContext;
+import com.agenson.cinema.security.UserRole;
 import com.agenson.cinema.utils.CallableOneArgument;
+import com.agenson.cinema.utils.StaffSecurityAssertion;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +26,30 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @Transactional
 @SpringBootTest
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class MovieIntegrationTests implements MovieConstants {
 
     @Autowired
     private ModelMapper mapper;
 
     @Autowired
+    private SecurityContext securityContext;
+
+    @Autowired
     private MovieRepository movieRepository;
 
     @Autowired
     private MovieService movieService;
+
+    @BeforeEach
+    public void defaultLogin() {
+        this.loginAs(UserRole.STAFF);
+    }
+
+    @AfterEach
+    public void logout() {
+        this.securityContext.logout();
+    }
 
     @Test
     public void findMovie_ShouldReturnPersistedMovie_WhenGivenUuidOrTitle() {
@@ -85,10 +105,19 @@ public class MovieIntegrationTests implements MovieConstants {
     }
 
     @Test
-    public void createOrUpdateMovie_ShouldNotPersistMovie_WhenGivenInvalidTitle() {
+    public void createMovie_ShouldNotPersistMovie_WhenGivenInvalidTitle() {
         this.assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(title -> {
             this.movieService.createMovie(title);
         });
+    }
+
+    @Test
+    public void createMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.movieService.createMovie(NORMAL_TITLE),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
     }
 
     @Test
@@ -103,12 +132,21 @@ public class MovieIntegrationTests implements MovieConstants {
     }
 
     @Test
-    public void updateMovie_ShouldNotPersistMovie_WhenGivenInvalidTitle() {
+    public void updateMovieTitle_ShouldNotPersistMovie_WhenGivenInvalidTitle() {
         UUID uuid = this.movieRepository.save(new MovieDB(NORMAL_TITLE)).getUuid();
 
         this.assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(title -> {
             this.movieService.updateMovieTitle(uuid, title);
         });
+    }
+
+    @Test
+    public void updateMovieTitle_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.movieService.updateMovieTitle(UUID.randomUUID(), UNKNOWN_TITLE),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
     }
 
     @Test
@@ -118,6 +156,15 @@ public class MovieIntegrationTests implements MovieConstants {
         this.movieService.removeMovie(uuid);
 
         assertThat(this.movieRepository.findByUuid(uuid).isPresent()).isFalse();
+    }
+
+    @Test
+    public void removeMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.movieService.removeMovie(UUID.randomUUID()),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
     }
 
     private void assertShouldThrowInvalidMovieException_WhenGivenInvalidTitle(CallableOneArgument<String> callable) {
@@ -134,5 +181,9 @@ public class MovieIntegrationTests implements MovieConstants {
             assertThat(actual.size()).isEqualTo(expected.size());
             assertThat(actual).containsOnlyOnceElementsOf(expected);
         }
+    }
+
+    private void loginAs(UserRole role) {
+        this.securityContext.login(UUID.randomUUID(), role);
     }
 }

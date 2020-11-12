@@ -42,6 +42,8 @@ public class ConsoleIO implements CommandLineRunner {
         for (RoomDTO room : roomService.findRooms())
             System.out.println(room);
 
+        this.userService.loginUser("staff", "password");
+
         System.out.println("\nUsers:");
 
         for (UserDTO user : userService.findUsers())

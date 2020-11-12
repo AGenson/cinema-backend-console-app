@@ -1,5 +1,7 @@
 package com.agenson.cinema.user;
 
+import com.agenson.cinema.security.*;
+import com.agenson.cinema.security.SecurityException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,9 +16,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+
     private final UserRepository userRepository;
 
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final SecurityContext securityContext;
 
     private final ModelMapper mapper;
 
@@ -28,28 +32,40 @@ public class UserService {
         return this.userRepository.findByUsername(username).map(this::toDTO);
     }
 
+    @RestrictToStaff
     public List<UserDTO> findUsers() {
         return this.userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public UserDTO loginUser(String username, String password) {
         return this.userRepository.findByUsername(username).map(user -> {
-            if (this.passwordEncoder.matches(password, user.getPassword()))
+            if (password != null && ENCODER.matches(password, user.getPassword())) {
+                this.securityContext.login(user.getUuid(), user.getRole());
+
                 return this.toDTO(user);
+            }
 
             return null;
-        }).orElseThrow(() -> new InvalidUserException(InvalidUserException.Type.CONNECTION));
+        }).orElseThrow(() -> new SecurityException(SecurityException.Type.CONNECTION));
+    }
+
+    public void logoutUser() {
+        this.securityContext.logout();
     }
 
     public UserDTO createUser(String username, String password) {
         this.validateUsername(null, username);
         this.validatePassword(password);
 
-        String encodedPassword = this.passwordEncoder.encode(password);
+        String encodedPassword = ENCODER.encode(password);
+        UserDB user = this.userRepository.save(new UserDB(username, encodedPassword));
 
-        return this.toDTO(this.userRepository.save(new UserDB(username, encodedPassword)));
+        this.securityContext.login(user.getUuid(), user.getRole());
+
+        return this.toDTO(user);
     }
 
+    @RestrictToUser
     public Optional<UserDTO> updateUserUsername(UUID uuid, String username) {
         return this.userRepository.findByUuid(uuid).map(user -> {
             this.validateUsername(uuid, username);
@@ -59,18 +75,20 @@ public class UserService {
         });
     }
 
+    @RestrictToUser
     public Optional<UserDTO> updateUserPassword(UUID uuid, String password) {
         return this.userRepository.findByUuid(uuid).map(user -> {
             this.validatePassword(password);
 
-            String encodedPassword = this.passwordEncoder.encode(password);
+            String encodedPassword = ENCODER.encode(password);
             user.setPassword(encodedPassword);
 
             return this.toDTO(this.userRepository.save(user));
         });
     }
 
-    public Optional<UserDTO> updateUserRole(UUID uuid, Role role) {
+    @RestrictToStaff
+    public Optional<UserDTO> updateUserRole(UUID uuid, UserRole role) {
         return this.userRepository.findByUuid(uuid).map(user -> {
            user.setRole(role);
 
@@ -78,6 +96,7 @@ public class UserService {
         });
     }
 
+    @RestrictToUser
     public void removeUser(UUID uuid) {
         this.userRepository.deleteByUuid(uuid);
     }

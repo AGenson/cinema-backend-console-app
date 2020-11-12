@@ -1,5 +1,6 @@
 package com.agenson.cinema.user;
 
+import com.agenson.cinema.security.UserRole;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -20,7 +21,7 @@ public class UserDB {
     private String password = "";
 
     @Enumerated(EnumType.ORDINAL)
-    private Role role = Role.COSTUMER;
+    private UserRole role = UserRole.CUSTOMER;
 
     public UserDB(String username, String password) {
         this.username = username;

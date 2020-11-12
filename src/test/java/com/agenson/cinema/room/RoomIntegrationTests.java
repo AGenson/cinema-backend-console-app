@@ -2,12 +2,18 @@ package com.agenson.cinema.room;
 
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
+import com.agenson.cinema.security.SecurityContext;
+import com.agenson.cinema.security.UserRole;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.CallableTwoArguments;
+import com.agenson.cinema.utils.StaffSecurityAssertion;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @Transactional
 @SpringBootTest
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class RoomIntegrationTests implements RoomConstants {
 
     private static final List<Map.Entry<Integer, Integer>> INVALID_ROOM_CAPACITIES = Arrays.asList(
@@ -34,16 +41,29 @@ public class RoomIntegrationTests implements RoomConstants {
     private ModelMapper mapper;
 
     @Autowired
+    private SecurityContext securityContext;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
     private RoomRepository roomRepository;
 
     @Autowired
     private MovieRepository movieRepository;
 
     @Autowired
-    private EntityManager entityManager;
-
-    @Autowired
     private RoomService roomService;
+
+    @BeforeEach
+    public void defaultLogin() {
+        this.loginAs(UserRole.STAFF);
+    }
+
+    @AfterEach
+    public void logout() {
+        this.securityContext.logout();
+    }
 
     @Test
     public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuidOrRoomNumber() {
@@ -126,6 +146,15 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
+    public void createRoom_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
+    }
+
+    @Test
     public void updateRoomNumber_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomNumber() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
@@ -146,6 +175,15 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
+    public void updateRoomNumber_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.roomService.updateRoomNumber(UUID.randomUUID(), UNKNOWN_NUMBER),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
+    }
+
+    @Test
     public void updateRoomCapacity_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomCapacity() {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
@@ -163,6 +201,15 @@ public class RoomIntegrationTests implements RoomConstants {
         this.assertShouldNotPersistRoom_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
             this.roomService.updateRoomCapacity(uuid, nbRows, nbCols);
         });
+    }
+
+    @Test
+    public void updateRoomCapacity_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.roomService.updateRoomCapacity(UUID.randomUUID(), NEGATIVE_ROWS, NEGATIVE_COLS),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
     }
 
     @Test
@@ -196,13 +243,31 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
+    public void updateRoomMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.roomService.updateRoomMovie(UUID.randomUUID(), UUID.randomUUID()),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
+    }
+
+    @Test
     public void removeRoom_ShouldRemoveRoom_WhenGivenUuid() {
         RoomDB room = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS));
 
-        this.roomService.removeMovie(room.getUuid());
+        this.roomService.removeRoom(room.getUuid());
         Optional<RoomDB> actual = this.roomRepository.findByUuid(room.getUuid());
 
         assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void removeRoom_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.roomService.removeRoom(UUID.randomUUID()),
+                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.logout()
+        );
     }
 
     private void assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(CallableOneArgument<Integer> callable) {
@@ -236,5 +301,9 @@ public class RoomIntegrationTests implements RoomConstants {
             assertThat(actual.size()).isEqualTo(expected.size());
             assertThat(actual).containsOnlyOnceElementsOf(expected);
         }
+    }
+
+    private void loginAs(UserRole role) {
+        this.securityContext.login(UUID.randomUUID(), role);
     }
 }

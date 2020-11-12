@@ -2,6 +2,7 @@ package com.agenson.cinema.room;
 
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
+import com.agenson.cinema.security.RestrictToStaff;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class RoomService {
                 .orElse(Collections.emptyList());
     }
 
+    @RestrictToStaff
     public RoomDTO createRoom(int number, int nbRows, int nbCols) {
         this.validateNumber(null, number);
         this.validateCapacity(nbRows, nbCols);
@@ -47,6 +49,7 @@ public class RoomService {
         return this.toDTO(this.roomRepository.save(new RoomDB(number, nbRows, nbCols)));
     }
 
+    @RestrictToStaff
     public Optional<RoomDTO> updateRoomNumber(UUID uuid, int number) {
         return this.roomRepository.findByUuid(uuid).map(movie -> {
             this.validateNumber(movie.getUuid(), number);
@@ -56,6 +59,7 @@ public class RoomService {
         });
     }
 
+    @RestrictToStaff
     public Optional<RoomDTO> updateRoomCapacity(UUID uuid, int nbRows, int nbCols) {
         return this.roomRepository.findByUuid(uuid).map(movie -> {
             this.validateCapacity(nbRows, nbCols);
@@ -66,6 +70,7 @@ public class RoomService {
         });
     }
 
+    @RestrictToStaff
     public Optional<RoomDTO> updateRoomMovie(UUID uuid, UUID movieUuid) {
         return this.roomRepository.findByUuid(uuid).map(room -> {
             Optional<MovieDB> movie = this.movieRepository.findByUuid(movieUuid);
@@ -78,7 +83,8 @@ public class RoomService {
         });
     }
 
-    public void removeMovie(UUID uuid) {
+    @RestrictToStaff
+    public void removeRoom(UUID uuid) {
         this.roomRepository.deleteByUuid(uuid);
     }
 
