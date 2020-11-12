@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,8 +40,13 @@ public class UserServiceUnitTests implements UserConstants {
                 put(MAX_SIZE_PASSWORD, InvalidUserException.Type.PASSWORD_MAXSIZE);
             }};
 
+    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+
     @Mock
     private ModelMapper mapper;
+
+    @Mock
+    private BCryptPasswordEncoder passwordEncoder;
 
     @Mock
     private UserRepository userRepository;
@@ -60,7 +66,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void findUser_ShouldReturnUser_WhenGivenUuidOrUsername() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
         when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
@@ -92,8 +98,8 @@ public class UserServiceUnitTests implements UserConstants {
     @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
-                new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD),
-                new UserDB(ANOTHER_USERNAME, NORMAL_PASSWORD)
+                this.newUserInstance(NORMAL_USERNAME),
+                this.newUserInstance(ANOTHER_USERNAME)
         );
 
         when(this.userRepository.findAll()).thenReturn(userList);
@@ -109,23 +115,27 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void loginUser_ShouldReturnUser_WhenGivenCredentials() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        when(this.passwordEncoder.matches(NORMAL_PASSWORD, user.getPassword())).thenReturn(true);
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
-        UserDTO actual = this.userService.loginUser(user.getUsername(), user.getPassword());
+        UserDTO actual = this.userService.loginUser(user.getUsername(), NORMAL_PASSWORD);
 
         assertThat(actual).isEqualTo(expected);
     }
 
     @Test
     public void loginUser_ShouldThrowInvalidUserException_WhenGivenInvalidCredentials() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
         when(this.userRepository.findByUsername(UNKNOWN_USERNAME)).thenReturn(Optional.empty());
         when(this.userRepository.findByUsername(null)).thenReturn(Optional.empty());
+
+        when(this.passwordEncoder.matches(UNKNOWN_PASSWORD, user.getPassword())).thenReturn(false);
+        when(this.passwordEncoder.matches(null, user.getPassword())).thenReturn(false);
 
         for (String username : Arrays.asList(null, UNKNOWN_USERNAME))
             assertThatExceptionOfType(InvalidUserException.class)
@@ -142,6 +152,7 @@ public class UserServiceUnitTests implements UserConstants {
     public void createUser_ShouldReturnUser_WhenGivenCredentials() {
         when(this.userRepository.findByUsername(NORMAL_USERNAME)).thenReturn(Optional.empty());
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
+        when(this.passwordEncoder.encode(NORMAL_PASSWORD)).thenReturn(ENCODER.encode(NORMAL_PASSWORD));
 
         UserDTO actual = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
 
@@ -163,7 +174,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserUsername_ShouldReturnModifiedUser_WhenGivenUuidAndUsername() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
@@ -180,7 +191,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserUsername_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidUsername() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
 
@@ -191,10 +202,11 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserPassword_ShouldReturnUser_WhenGivenUuidAndPassword() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
+        when(this.passwordEncoder.encode(ANOTHER_PASSWORD)).thenReturn(ENCODER.encode(ANOTHER_PASSWORD));
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
         Optional<UserDTO> actual = this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
@@ -205,7 +217,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserPassword_ShouldThrowAssociatedInvalidUserException_WhenGivenInvalidPassword() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
 
@@ -216,7 +228,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void updateUserRole_ShouldReturnUser_WhenGivenUuidAndRole() {
-        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
@@ -230,7 +242,7 @@ public class UserServiceUnitTests implements UserConstants {
 
     private void assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(CallableOneArgument<String> callable) {
         when(this.userRepository.findByUsername(anyString())).thenAnswer(invocation -> {
-            UserDB userWithSameUsername = new UserDB(invocation.getArgument(0), NORMAL_PASSWORD);
+            UserDB userWithSameUsername = this.newUserInstance(invocation.getArgument(0));
 
             return Optional.of(userWithSameUsername);
         });
@@ -246,5 +258,11 @@ public class UserServiceUnitTests implements UserConstants {
             assertThatExceptionOfType(InvalidUserException.class)
                     .isThrownBy(() -> callable.call(pair.getKey()))
                     .withMessage(pair.getValue().toString());
+    }
+
+    private UserDB newUserInstance(String username) {
+        String encodedPassword = ENCODER.encode(NORMAL_PASSWORD);
+
+        return new UserDB(username, encodedPassword);
     }
 }

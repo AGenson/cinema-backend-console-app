@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,9 @@ public class UserIntegrationTests implements UserConstants {
     private ModelMapper mapper;
 
     @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -33,7 +37,7 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void findUser_ShouldReturnPersistedUser_WhenGivenUuidOrUsername() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
         Optional<UserDTO> actual = this.userService.findUser(user.getUuid());
@@ -56,8 +60,8 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
-                new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD),
-                new UserDB(ANOTHER_USERNAME, NORMAL_PASSWORD)
+                this.newUserInstance(NORMAL_USERNAME),
+                this.newUserInstance(ANOTHER_USERNAME)
         );
 
         assertThat(this.userRepository.findAll().size()).isZero();
@@ -75,17 +79,17 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void loginUser_ShouldReturnPersistedUser_WhenGivenCredentials() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
-        UserDTO actual = this.userService.loginUser(user.getUsername(), user.getPassword());
+        UserDTO actual = this.userService.loginUser(user.getUsername(), NORMAL_PASSWORD);
 
         assertThat(actual).isEqualTo(expected);
     }
 
     @Test
     public void loginUser_ShouldThrowInvalidUserException_WhenGivenInvalidCredentials() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         assertThatExceptionOfType(InvalidUserException.class)
                 .isThrownBy(() -> this.userService.loginUser(UNKNOWN_USERNAME, user.getPassword()));
@@ -97,11 +101,15 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void createUser_ShouldReturnPersistedUser_WhenGivenCredentials() {
         UserDTO expected = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
-        Optional<UserDTO> actual = this.userRepository.findByUuid(expected.getUuid())
-                .map(user -> this.mapper.map(user, UserDTO.class));
 
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        Optional<UserDB> actualDB = this.userRepository.findByUuid(expected.getUuid());
+        Optional<UserDTO> actualDTO = actualDB.map(user -> this.mapper.map(user, UserDTO.class));
+
+        assertThat(actualDTO.isPresent()).isTrue();
+        assertThat(actualDTO.get()).isEqualTo(expected);
+
+        String encodedPassword = actualDB.get().getPassword();
+        assertThat(this.passwordEncoder.matches(NORMAL_PASSWORD, encodedPassword)).isTrue();
     }
 
     @Test
@@ -117,7 +125,7 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void updateUserUsername_ShouldReturnModifiedUser_WhenGivenUuidAndUsername() {
-        UUID uuid = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD)).getUuid();
+        UUID uuid = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME)).getUuid();
 
         Optional<UserDTO> expected = this.userService.updateUserUsername(uuid, ANOTHER_USERNAME);
         Optional<UserDTO> actual = this.userRepository.findByUuid(uuid)
@@ -128,7 +136,7 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void updateUserUsername_ShouldNotPersistUser_WhenGivenInvalidUsername() {
-        UUID uuid = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD)).getUuid();
+        UUID uuid = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME)).getUuid();
 
         this.assertShouldNotPersistUser_WhenGivenInvalidUsername(username -> {
             this.userService.updateUserUsername(uuid, username);
@@ -137,19 +145,20 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void updateUserPassword_ShouldPersistNewPassword_WhenGivenUuidAndPassword() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
-
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get().getPassword()).isEqualTo(ANOTHER_PASSWORD);
+
+        String encodedPassword = actual.get().getPassword();
+        assertThat(this.passwordEncoder.matches(ANOTHER_PASSWORD, encodedPassword)).isTrue();
     }
 
     @Test
     public void updateUserPassword_ShouldNotPersistUser_WhenGivenInvalidPassword() {
-        UUID uuid = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD)).getUuid();
+        UUID uuid = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME)).getUuid();
 
         this.assertShouldNotPersistUser_WhenGivenInvalidPassword(password -> {
             this.userService.updateUserPassword(uuid, password);
@@ -158,10 +167,9 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void updateUserRole_ShouldPersistNewRole_WhenGivenUuidAndPassword() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         this.userService.updateUserRole(user.getUuid(), Role.STAFF);
-
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -170,7 +178,7 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void removeUser_ShouldRemoveUser_WhenGivenUuid() {
-        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
         this.userService.removeUser(user.getUuid());
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
@@ -180,7 +188,7 @@ public class UserIntegrationTests implements UserConstants {
 
     private void assertShouldNotPersistUser_WhenGivenInvalidUsername(CallableOneArgument<String> callable) {
         if (!this.userRepository.findByUsername(ANOTHER_USERNAME).isPresent())
-            this.userRepository.save(new UserDB(ANOTHER_USERNAME, ANOTHER_PASSWORD));
+            this.userRepository.save(this.newUserInstance(ANOTHER_USERNAME));
 
         List<UserDB> expected = this.userRepository.findAll();
 
@@ -207,5 +215,11 @@ public class UserIntegrationTests implements UserConstants {
             assertThat(actual.size()).isEqualTo(expected.size());
             assertThat(actual).containsOnlyOnceElementsOf(expected);
         }
+    }
+
+    private UserDB newUserInstance(String username) {
+        String encodedPassword = this.passwordEncoder.encode(NORMAL_PASSWORD);
+
+        return new UserDB(username, encodedPassword);
     }
 }

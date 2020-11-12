@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
@@ -19,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 public class UserRepositoryUnitTests implements UserConstants {
 
+    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+
     @Autowired
     private TestEntityManager entityManager;
 
@@ -29,7 +32,7 @@ public class UserRepositoryUnitTests implements UserConstants {
 
     @BeforeEach
     public void setup() {
-        expected = this.entityManager.persist(new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD));
+        expected = this.entityManager.persist(new UserDB(NORMAL_USERNAME, ENCODER.encode(NORMAL_PASSWORD)));
     }
 
     @Test

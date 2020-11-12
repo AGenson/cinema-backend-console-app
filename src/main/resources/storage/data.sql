@@ -9,5 +9,5 @@ INSERT INTO room (id, uuid, number, nb_rows, nb_cols, movie_id) VALUES
     (3, 'c66820cd-546f-40fb-bbf8-4e464eae9981', 3, 8, 13, 3);
 
 INSERT INTO "user" (id, uuid, username, password, role) VALUES
-    (1, 'f99b946d-8d93-42fd-93f0-4f6fa25781be', 'staff', 'password', 1),
-    (2, '1b7fce81-b2a2-4cfa-9b85-f76dd0d48f8c', 'costumer', 'password', 0);
+    (1, 'f99b946d-8d93-42fd-93f0-4f6fa25781be', 'staff', '$2a$10$y5FAw5f3NRxF2SV4Wvwc7OZOV2zwXc86b.tCaHj7umczGQkhGFTvS', 1),
+    (2, '1b7fce81-b2a2-4cfa-9b85-f76dd0d48f8c', 'costumer', '$2a$10$cV.BVUULK5XXIoxrcvvnQ.9esx.TscTIaTyChaNogk3h96YreEJEm', 0);

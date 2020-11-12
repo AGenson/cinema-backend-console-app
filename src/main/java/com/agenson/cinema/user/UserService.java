@@ -2,10 +2,10 @@ package com.agenson.cinema.user;
 
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+
+    private final BCryptPasswordEncoder passwordEncoder;
 
     private final ModelMapper mapper;
 
@@ -32,7 +34,7 @@ public class UserService {
 
     public UserDTO loginUser(String username, String password) {
         return this.userRepository.findByUsername(username).map(user -> {
-            if (Objects.equals(user.getPassword(), password))
+            if (this.passwordEncoder.matches(password, user.getPassword()))
                 return this.toDTO(user);
 
             return null;
@@ -43,7 +45,9 @@ public class UserService {
         this.validateUsername(null, username);
         this.validatePassword(password);
 
-        return this.toDTO(this.userRepository.save(new UserDB(username, password)));
+        String encodedPassword = this.passwordEncoder.encode(password);
+
+        return this.toDTO(this.userRepository.save(new UserDB(username, encodedPassword)));
     }
 
     public Optional<UserDTO> updateUserUsername(UUID uuid, String username) {
@@ -58,7 +62,9 @@ public class UserService {
     public Optional<UserDTO> updateUserPassword(UUID uuid, String password) {
         return this.userRepository.findByUuid(uuid).map(user -> {
             this.validatePassword(password);
-            user.setPassword(password);
+
+            String encodedPassword = this.passwordEncoder.encode(password);
+            user.setPassword(encodedPassword);
 
             return this.toDTO(this.userRepository.save(user));
         });
