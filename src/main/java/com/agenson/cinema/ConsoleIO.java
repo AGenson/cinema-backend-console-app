@@ -2,6 +2,8 @@ package com.agenson.cinema;
 
 import com.agenson.cinema.movie.MovieDTO;
 import com.agenson.cinema.movie.MovieService;
+import com.agenson.cinema.order.OrderDTO;
+import com.agenson.cinema.order.OrderService;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.room.RoomService;
 import com.agenson.cinema.user.UserDTO;
@@ -23,6 +25,8 @@ public class ConsoleIO implements CommandLineRunner {
     private final RoomService roomService;
 
     private final UserService userService;
+
+    private final OrderService orderService;
 
     @Override
     public void run(String... args) {
@@ -48,5 +52,10 @@ public class ConsoleIO implements CommandLineRunner {
 
         for (UserDTO user : userService.findUsers())
             System.out.println(user);
+
+        System.out.println("\nOrders:");
+
+        for (OrderDTO order : orderService.findOrders())
+            System.out.println(order);
     }
 }

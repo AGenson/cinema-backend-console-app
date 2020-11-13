@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS room;
 DROP TABLE IF EXISTS movie;
+DROP TABLE IF EXISTS "order";
 DROP TABLE IF EXISTS "user";
 
 CREATE TABLE movie (
@@ -23,4 +24,10 @@ CREATE TABLE "user" (
     username    VARCHAR(16)     NOT NULL        UNIQUE,
     password    CHAR(60)        NOT NULL,
     role        SMALLINT        NOT NULL
+);
+
+CREATE TABLE "order" (
+    id          IDENTITY        NOT NULL        PRIMARY KEY,
+    uuid        UUID            NOT NULL        UNIQUE,
+    user_id     BIGINT          NOT NULL        REFERENCES "user"(id)
 );

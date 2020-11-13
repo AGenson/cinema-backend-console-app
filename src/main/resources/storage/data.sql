@@ -11,3 +11,7 @@ INSERT INTO room (id, uuid, number, nb_rows, nb_cols, movie_id) VALUES
 INSERT INTO "user" (id, uuid, username, password, role) VALUES
     (1, 'f99b946d-8d93-42fd-93f0-4f6fa25781be', 'staff', '$2a$10$y5FAw5f3NRxF2SV4Wvwc7OZOV2zwXc86b.tCaHj7umczGQkhGFTvS', 1),
     (2, '1b7fce81-b2a2-4cfa-9b85-f76dd0d48f8c', 'costumer', '$2a$10$cV.BVUULK5XXIoxrcvvnQ.9esx.TscTIaTyChaNogk3h96YreEJEm', 0);
+
+INSERT INTO "order" (id, uuid, user_id) VALUES
+    (1, '50cb36de-5c03-4097-a281-1d8d99fd793c', 2),
+    (2, 'f5bca9f2-e582-48b1-ba8d-c85f0d89844d', 2);

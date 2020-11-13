@@ -1,5 +1,6 @@
 package com.agenson.cinema.user;
 
+import com.agenson.cinema.order.OrderDB;
 import com.agenson.cinema.security.UserRole;
 import com.agenson.cinema.security.SecurityContext;
 import com.agenson.cinema.security.SecurityException;
@@ -16,6 +17,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,9 @@ public class UserIntegrationTests implements UserConstants {
 
     @Autowired
     private SecurityContext securityContext;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private UserRepository userRepository;
@@ -255,14 +260,22 @@ public class UserIntegrationTests implements UserConstants {
     }
 
     @Test
-    public void removeUser_ShouldRemoveUser_WhenGivenUuid() {
+    public void removeUser_ShouldRemoveUserAndOrder_WhenGivenUuid() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
+        OrderDB order = new OrderDB(user);
 
+        this.entityManager.persist(order);
+        this.entityManager.refresh(user);
+
+        assertThat(this.entityManager.contains(order)).isTrue();
+
+        this.loginAs(user.getUuid(), user.getRole());
         this.userService.removeUser(user.getUuid());
+
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
 
         assertThat(actual.isPresent()).isFalse();
+        assertThat(this.entityManager.contains(order)).isFalse();
     }
 
     @Test
