@@ -32,6 +32,6 @@ public class SecurityContext {
     }
 
     public boolean isUser(UUID uuid) {
-        return this.isLoggedIn() && this.currentUser.getUuid() == uuid;
+        return this.isLoggedIn() && this.currentUser.getUuid().equals(uuid);
     }
 }

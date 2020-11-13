@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+import static java.lang.Integer.min;
+
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -27,12 +29,13 @@ public class SecurityManager {
     @Before("@annotation(RestrictToUser)")
     public void restrictToUser(JoinPoint joinPoint) throws SecurityException {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        RestrictToUser annotation = signature.getMethod().getAnnotation(RestrictToUser.class);
         List<String> argNames = Arrays.asList(signature.getParameterNames());
         List<Object> args = Arrays.asList(joinPoint.getArgs());
         Optional<UUID> uuid = Optional.empty();
 
-        for (int i = 0; i < args.size(); i++) {
-            if (Objects.equals(argNames.get(i), "uuid") && args.get(i) instanceof UUID) {
+        for (int i = 0; i < min(args.size(), argNames.size()); i++) {
+            if (Objects.equals(argNames.get(i), annotation.argName()) && args.get(i) instanceof UUID) {
                 uuid = Optional.of((UUID) args.get(i));
                 break;
             }
@@ -40,7 +43,7 @@ public class SecurityManager {
 
         if (!this.securityContext.isLoggedIn())
             throw new SecurityException(SecurityException.Type.IDENTIFICATION);
-        else if (uuid.isPresent() && !this.securityContext.isUser(uuid.get()))
+        else if (!uuid.isPresent() || !this.securityContext.isUser(uuid.get()))
             throw new SecurityException(SecurityException.Type.AUTHORIZATION);
     }
 }
