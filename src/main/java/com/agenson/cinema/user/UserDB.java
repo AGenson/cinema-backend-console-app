@@ -29,7 +29,7 @@ public class UserDB {
 
     @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.REMOVE)
-    List<OrderDB> orders = Collections.emptyList();
+    private List<OrderDB> orders = Collections.emptyList();
 
     public UserDB(String username, String password) {
         this.username = username;

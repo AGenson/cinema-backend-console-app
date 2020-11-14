@@ -1,5 +1,8 @@
 package com.agenson.cinema.order;
 
+import com.agenson.cinema.room.RoomDB;
+import com.agenson.cinema.ticket.TicketDB;
+import com.agenson.cinema.ticket.seat.Seat;
 import com.agenson.cinema.user.UserDB;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,5 +63,26 @@ public class OrderRepositoryUnitTests {
         Optional<OrderDB> actual = this.orderRepository.findById(this.expected.getId());
 
         assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void deleteByUuid_ShouldSetForeignKeysToNull_WhenGivenUuid() {
+        RoomDB room = this.entityManager.persist(new RoomDB(1, 10, 20));
+        TicketDB ticket = new TicketDB(room, this.expected, Seat.fromString("A01"));
+
+        ticket = this.entityManager.persist(ticket);
+
+        this.entityManager.refresh(this.expected);
+        this.entityManager.refresh(room);
+        this.entityManager.refresh(ticket);
+
+        assertThat(this.expected.getTickets()).containsOnly(ticket);
+        assertThat(ticket.getOrder()).isEqualTo(this.expected);
+
+        this.orderRepository.deleteByUuid(this.expected.getUuid());
+        this.entityManager.flush();
+        this.entityManager.refresh(ticket);
+
+        assertThat(ticket.getOrder()).isNull();
     }
 }

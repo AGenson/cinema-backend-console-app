@@ -6,6 +6,8 @@ import com.agenson.cinema.order.OrderDTO;
 import com.agenson.cinema.order.OrderService;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.room.RoomService;
+import com.agenson.cinema.ticket.TicketDTO;
+import com.agenson.cinema.ticket.TicketService;
 import com.agenson.cinema.user.UserDTO;
 import com.agenson.cinema.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,8 @@ public class ConsoleIO implements CommandLineRunner {
     private final UserService userService;
 
     private final OrderService orderService;
+
+    private final TicketService ticketService;
 
     @Override
     public void run(String... args) {
@@ -57,5 +61,10 @@ public class ConsoleIO implements CommandLineRunner {
 
         for (OrderDTO order : orderService.findOrders())
             System.out.println(order);
+
+        System.out.println("\nTickets:");
+
+        for (TicketDTO ticket : ticketService.findTickets())
+            System.out.println(ticket);
     }
 }

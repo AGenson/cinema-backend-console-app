@@ -1,5 +1,7 @@
 package com.agenson.cinema.room;
 
+import com.agenson.cinema.ticket.TicketDB;
+import com.agenson.cinema.ticket.seat.Seat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,5 +70,24 @@ public class RoomRepositoryUnitTests implements RoomConstants {
         Optional<RoomDB> actual = this.roomRepository.findById(this.expected.getId());
 
         assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void deleteByUuid_ShouldDeleteTickets_WhenGivenUuid() {
+        TicketDB ticket = new TicketDB(this.expected, null, Seat.fromString("A01"));
+
+        ticket = this.entityManager.persist(ticket);
+
+        this.entityManager.refresh(this.expected);
+        this.entityManager.refresh(ticket);
+
+        assertThat(this.entityManager.find(TicketDB.class, ticket.getId())).isNotNull();
+        assertThat(this.expected.getTickets()).containsOnly(ticket);
+        assertThat(ticket.getRoom()).isEqualTo(this.expected);
+
+        this.roomRepository.deleteByUuid(this.expected.getUuid());
+        this.entityManager.flush();
+
+        assertThat(this.entityManager.find(TicketDB.class, ticket.getId())).isNull();
     }
 }

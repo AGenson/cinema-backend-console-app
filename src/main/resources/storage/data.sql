@@ -15,3 +15,8 @@ INSERT INTO "user" (id, uuid, username, password, role) VALUES
 INSERT INTO "order" (id, uuid, user_id) VALUES
     (1, '50cb36de-5c03-4097-a281-1d8d99fd793c', 2),
     (2, 'f5bca9f2-e582-48b1-ba8d-c85f0d89844d', 2);
+
+INSERT INTO ticket (id, uuid, seat, room_id, order_id) VALUES
+    (1, '4165fa3a-d546-48ca-8915-15aaf4b47cce', 'A01', 1, 1),
+    (2, '218fd0d2-cadc-46f9-a09e-f9f37b9b4114', 'A02', 1, 1),
+    (3, '5864afe0-72db-4183-9b52-e3fd698bfffd', 'D12', 2, 2);

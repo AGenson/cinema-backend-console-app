@@ -1,5 +1,6 @@
 package com.agenson.cinema.user;
 
+import com.agenson.cinema.order.OrderDB;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,5 +73,24 @@ public class UserRepositoryUnitTests implements UserConstants {
         Optional<UserDB> actual = this.userRepository.findById(this.expected.getId());
 
         assertThat(actual.isPresent()).isFalse();
+    }
+
+    @Test
+    public void deleteByUuid_ShouldDeleteOrders_WhenGiven_Uuid() {
+        OrderDB order = new OrderDB(this.expected);
+
+        order = this.entityManager.persist(order);
+
+        this.entityManager.refresh(this.expected);
+        this.entityManager.refresh(order);
+
+        assertThat(this.entityManager.find(OrderDB.class, order.getId())).isNotNull();
+        assertThat(this.expected.getOrders()).containsOnly(order);
+        assertThat(order.getUser()).isEqualTo(this.expected);
+
+        this.userRepository.deleteByUuid(this.expected.getUuid());
+        this.entityManager.flush();
+
+        assertThat(this.entityManager.find(OrderDB.class, order.getId())).isNull();
     }
 }

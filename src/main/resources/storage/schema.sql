@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS ticket;
 DROP TABLE IF EXISTS room;
 DROP TABLE IF EXISTS movie;
 DROP TABLE IF EXISTS "order";
@@ -30,4 +31,12 @@ CREATE TABLE "order" (
     id          IDENTITY        NOT NULL        PRIMARY KEY,
     uuid        UUID            NOT NULL        UNIQUE,
     user_id     BIGINT          NOT NULL        REFERENCES "user"(id)
+);
+
+CREATE TABLE ticket (
+    id          IDENTITY        NOT NULL        PRIMARY KEY,
+    uuid        UUID            NOT NULL        UNIQUE,
+    seat        CHAR(3)         NOT NULL,
+    room_id     BIGINT          NOT NULL        REFERENCES room(id),
+    order_id    BIGINT                          REFERENCES "order"(id) ON DELETE SET NULL
 );
