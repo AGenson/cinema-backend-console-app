@@ -1,7 +1,8 @@
 package com.agenson.cinema.console.views;
 
-import com.agenson.cinema.console.AbstractView;
+import com.agenson.cinema.console.template.AbstractStatelessView;
 import com.agenson.cinema.console.views.identification.IdentificationView;
+import com.agenson.cinema.console.views.management.StaffMenuView;
 import com.agenson.cinema.security.SecurityService;
 import com.agenson.cinema.security.SecurityRole;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +12,13 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-public class MainMenuView extends AbstractView {
+public class MainMenuView extends AbstractStatelessView {
 
     private final SecurityService securityService;
 
     private final IdentificationView identificationView;
+
+    private final StaffMenuView staffMenuView;
 
     @Override
     protected String getTitle() {
@@ -68,12 +71,12 @@ public class MainMenuView extends AbstractView {
 
             case "0":
                 if (this.securityService.hasRole(SecurityRole.STAFF)) {
-                    System.out.println("Going to staff...");
+                    this.staffMenuView.handler();
                     break;
                 }
 
             default:
-                this.inputError();
+                this.informError();
                 this.setProcessInput(true);
                 break;
         }

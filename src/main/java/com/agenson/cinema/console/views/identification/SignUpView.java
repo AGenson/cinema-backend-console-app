@@ -1,6 +1,6 @@
 package com.agenson.cinema.console.views.identification;
 
-import com.agenson.cinema.console.AbstractView;
+import com.agenson.cinema.console.template.AbstractStatelessView;
 import com.agenson.cinema.security.SecurityService;
 import com.agenson.cinema.user.InvalidUserException;
 import com.agenson.cinema.user.UserService;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SignUpView extends AbstractView {
+public class SignUpView extends AbstractStatelessView {
 
     private final UserService userService;
 

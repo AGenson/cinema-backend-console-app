@@ -1,4 +1,4 @@
-package com.agenson.cinema.console;
+package com.agenson.cinema.console.template;
 
 import lombok.Setter;
 
@@ -35,8 +35,12 @@ public abstract class AbstractView {
             this.setStayInView(true);
     }
 
-    protected void inputError() {
+    protected void informError() {
         System.out.println("Error: Input incorrect");
+    }
+
+    protected void informCancel() {
+        System.out.println("Enter 'C' to cancel.\n");
     }
 
     private void printHeader() {
@@ -53,7 +57,7 @@ public abstract class AbstractView {
 
     protected abstract void logic();
 
-    public void handler() {
+    protected void loop() {
         this.setStayInView(true);
 
         while (this.stayInView) {

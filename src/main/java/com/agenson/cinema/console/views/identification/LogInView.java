@@ -1,6 +1,6 @@
 package com.agenson.cinema.console.views.identification;
 
-import com.agenson.cinema.console.AbstractView;
+import com.agenson.cinema.console.template.AbstractStatelessView;
 import com.agenson.cinema.security.SecurityException;
 import com.agenson.cinema.security.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class LogInView extends AbstractView {
+public class LogInView extends AbstractStatelessView {
 
     private final SecurityService securityService;
 

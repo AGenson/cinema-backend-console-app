@@ -1,12 +1,12 @@
 package com.agenson.cinema.console.views.identification;
 
-import com.agenson.cinema.console.AbstractView;
+import com.agenson.cinema.console.template.AbstractStatelessView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class IdentificationView extends AbstractView {
+public class IdentificationView extends AbstractStatelessView {
 
     private final SignUpView signUpView;
 
@@ -45,7 +45,7 @@ public class IdentificationView extends AbstractView {
                 break;
 
             default:
-                this.inputError();
+                this.informError();
                 this.setProcessInput(true);
                 break;
         }
