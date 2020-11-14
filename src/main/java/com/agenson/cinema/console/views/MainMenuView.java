@@ -8,8 +8,6 @@ import com.agenson.cinema.security.SecurityRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
-
 @Component
 @RequiredArgsConstructor
 public class MainMenuView extends AbstractStatelessView {
@@ -27,9 +25,7 @@ public class MainMenuView extends AbstractStatelessView {
 
     @Override
     protected void printContent() {
-        Optional<String> username = this.securityService.getCurrentUser().map(SecurityService.UserDetails::getUsername);
-
-        username.ifPresent(str -> System.out.println("Logged in as: " + str + "\n"));
+        this.securityService.getCurrentUser().ifPresent(user -> System.out.println("Logged in as: " + user + "\n"));
 
         System.out.println("Please select an action:");
 

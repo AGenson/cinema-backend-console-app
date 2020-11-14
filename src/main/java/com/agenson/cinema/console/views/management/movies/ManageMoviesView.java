@@ -1,17 +1,14 @@
 package com.agenson.cinema.console.views.management.movies;
 
-import com.agenson.cinema.console.template.AbstractStatelessView;
+import com.agenson.cinema.console.template.AbstractListView;
 import com.agenson.cinema.movie.MovieDTO;
 import com.agenson.cinema.movie.MovieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.List;
-
 @Component
 @RequiredArgsConstructor
-public class ManageMoviesView extends AbstractStatelessView {
+public class ManageMoviesView extends AbstractListView<MovieDTO> {
 
     private static final int OFFSET = 2;
 
@@ -21,9 +18,8 @@ public class ManageMoviesView extends AbstractStatelessView {
 
     private final ManageMovieView manageMovieView;
 
-    private List<MovieDTO> list = Collections.emptyList();
-
-    private void refreshList() {
+    @Override
+    protected void refreshList() {
         this.list = this.movieService.findMovies();
     }
 
@@ -67,11 +63,5 @@ public class ManageMoviesView extends AbstractStatelessView {
             this.informError();
             this.setProcessInput(true);
         }
-    }
-
-    @Override
-    public void handler() {
-        this.refreshList();
-        super.handler();
     }
 }

@@ -2,6 +2,7 @@ package com.agenson.cinema.security;
 
 import com.agenson.cinema.user.UserConstants;
 import com.agenson.cinema.user.UserDB;
+import com.agenson.cinema.user.UserDetailsDTO;
 import com.agenson.cinema.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,11 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.Mockito.when;
 
 @Transactional
 @SpringBootTest
@@ -51,8 +50,8 @@ public class SecurityIntegrationTests implements UserConstants {
 
     @Test
     public void login_ShouldReturnUserDetails_WhenGivenCredentials() {
-        SecurityService.UserDetails actual = this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
-        SecurityService.UserDetails expected = new SecurityService.UserDetails(
+        UserDetailsDTO actual = this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDetailsDTO expected = new UserDetailsDTO(
                 this.defaultUser.getUuid(),
                 this.defaultUser.getUsername(),
                 this.defaultUser.getRole()

@@ -1,8 +1,8 @@
 package com.agenson.cinema.security;
 
+import com.agenson.cinema.user.UserDetailsDTO;
 import com.agenson.cinema.user.UserRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,27 +17,16 @@ public class SecurityService {
 
     private final UserRepository userRepository;
 
-    @Value
-    public static class UserDetails {
+    private UserDetailsDTO currentUser = null;
 
-        UUID uuid;
-        String username;
-        SecurityRole role;
+    public Optional<UserDetailsDTO> getCurrentUser() {
+        return (this.currentUser != null) ? Optional.of(this.currentUser) : Optional.empty();
     }
 
-    private UserDetails currentUser = null;
-
-    public Optional<UserDetails> getCurrentUser() {
-        if (this.currentUser == null)
-            return Optional.empty();
-
-        return Optional.of(this.currentUser);
-    }
-
-    public UserDetails login(String username, String password) {
+    public UserDetailsDTO login(String username, String password) {
         return this.userRepository.findByUsername(username).map(user -> {
             if (password != null && encoder.matches(password, user.getPassword())) {
-                this.currentUser = new UserDetails(user.getUuid(), user.getUsername(), user.getRole());
+                this.currentUser = new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole());
 
                 return this.currentUser;
             }

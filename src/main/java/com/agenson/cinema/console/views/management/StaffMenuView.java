@@ -2,11 +2,10 @@ package com.agenson.cinema.console.views.management;
 
 import com.agenson.cinema.console.template.AbstractStatelessView;
 import com.agenson.cinema.console.views.management.movies.ManageMoviesView;
+import com.agenson.cinema.console.views.management.users.ManageUsersView;
 import com.agenson.cinema.security.SecurityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -16,6 +15,8 @@ public class StaffMenuView extends AbstractStatelessView {
 
     private final ManageMoviesView manageMoviesView;
 
+    private final ManageUsersView manageUsersView;
+
     @Override
     protected String getTitle() {
         return "Staff Menu";
@@ -23,9 +24,7 @@ public class StaffMenuView extends AbstractStatelessView {
 
     @Override
     protected void printContent() {
-        Optional<String> username = this.securityService.getCurrentUser().map(SecurityService.UserDetails::getUsername);
-
-        username.ifPresent(str -> System.out.println("Logged in as: " + str + "\n"));
+        this.securityService.getCurrentUser().ifPresent(user -> System.out.println("Logged in as: " + user + "\n"));
 
         System.out.println("Please select an action:");
         System.out.println("[0] - Go to customer section");
@@ -55,7 +54,7 @@ public class StaffMenuView extends AbstractStatelessView {
                 break;
 
             case "3":
-                System.out.println("Going to manage users...");
+                this.manageUsersView.handler();
                 break;
 
             default:

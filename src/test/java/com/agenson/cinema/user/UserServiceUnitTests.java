@@ -105,9 +105,9 @@ public class UserServiceUnitTests implements UserConstants {
 
         when(this.userRepository.findAll()).thenReturn(userList);
 
-        List<UserDTO> actual = this.userService.findUsers();
-        List<UserDTO> expected = userList.stream()
-                .map(user -> this.mapper.map(user, UserDTO.class))
+        List<UserDetailsDTO> actual = this.userService.findUsers();
+        List<UserDetailsDTO> expected = userList.stream()
+                .map(user -> new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole()))
                 .collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());

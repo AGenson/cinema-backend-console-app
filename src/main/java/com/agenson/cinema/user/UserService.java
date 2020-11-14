@@ -32,8 +32,8 @@ public class UserService {
     }
 
     @RestrictToStaff
-    public List<UserDTO> findUsers() {
-        return this.userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+    public List<UserDetailsDTO> findUsers() {
+        return this.userRepository.findAll().stream().map(this::toDetailsDTO).collect(Collectors.toList());
     }
 
     public UserDTO createUser(String username, String password) {
@@ -84,6 +84,10 @@ public class UserService {
 
     private UserDTO toDTO(UserDB user) {
         return this.mapper.map(user, UserDTO.class);
+    }
+
+    private UserDetailsDTO toDetailsDTO(UserDB user) {
+        return new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole());
     }
 
     private void validateUsername(UUID uuid, String username) {

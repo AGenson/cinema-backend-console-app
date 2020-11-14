@@ -2,6 +2,7 @@ package com.agenson.cinema.security;
 
 import com.agenson.cinema.user.UserConstants;
 import com.agenson.cinema.user.UserDB;
+import com.agenson.cinema.user.UserDetailsDTO;
 import com.agenson.cinema.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.agenson.cinema.security.SecurityService.UserDetails;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.lenient;
@@ -50,8 +50,8 @@ public class SecurityServiceUnitTests implements UserConstants {
 
     @Test
     public void login_ShouldReturnUserDetails_WhenGivenCredentials() {
-        UserDetails actual = this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
-        UserDetails expected = new UserDetails(
+        UserDetailsDTO actual = this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserDetailsDTO expected = new UserDetailsDTO(
                 this.defaultUser.getUuid(),
                 this.defaultUser.getUsername(),
                 this.defaultUser.getRole()
