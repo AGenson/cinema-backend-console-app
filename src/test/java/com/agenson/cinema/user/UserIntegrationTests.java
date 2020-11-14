@@ -1,9 +1,8 @@
 package com.agenson.cinema.user;
 
 import com.agenson.cinema.order.OrderDB;
-import com.agenson.cinema.security.UserRole;
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.SecurityException;
+import com.agenson.cinema.security.SecurityRole;
+import com.agenson.cinema.security.SecurityService;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
@@ -33,13 +32,14 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class UserIntegrationTests implements UserConstants {
 
-    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+    @Autowired
+    private BCryptPasswordEncoder encoder;
 
     @Autowired
     private ModelMapper mapper;
 
     @Autowired
-    private SecurityContext securityContext;
+    private SecurityService securityService;
 
     @Autowired
     private EntityManager entityManager;
@@ -50,17 +50,18 @@ public class UserIntegrationTests implements UserConstants {
     @Autowired
     private UserService userService;
 
+    private UserDB defaultUser;
+
     @BeforeEach
     public void setup() {
-        if (this.securityContext.isLoggedIn())
-            this.securityContext.logout();
+        this.defaultUser = this.userRepository.save(this.newUserInstance(UNKNOWN_USERNAME));
 
-        this.loginAs(null, UserRole.STAFF);
+        this.loginAs(SecurityRole.STAFF);
     }
 
     @AfterEach
     public void logout() {
-        this.securityContext.logout();
+        this.securityService.logout();
     }
 
     @Test
@@ -82,17 +83,18 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void findUser_ShouldReturnNull_WhenNotFoundWithUuidOrUsername() {
         assertThat(this.userService.findUser(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.userService.findUser(UNKNOWN_USERNAME).isPresent()).isFalse();
+        assertThat(this.userService.findUser(ANOTHER_USERNAME).isPresent()).isFalse();
     }
 
     @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
                 this.newUserInstance(NORMAL_USERNAME),
-                this.newUserInstance(ANOTHER_USERNAME)
+                this.newUserInstance(ANOTHER_USERNAME),
+                this.defaultUser
         );
 
-        assertThat(this.userRepository.findAll().size()).isZero();
+        assertThat(this.userRepository.findAll().size()).isEqualTo(1);
 
         this.userRepository.saveAll(userList);
 
@@ -109,44 +111,9 @@ public class UserIntegrationTests implements UserConstants {
     public void findUsers_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.userService.findUsers(),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
-    }
-
-    @Test
-    public void loginUser_ShouldReturnPersistedUser_WhenGivenCredentials() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        UserDTO actual = this.userService.loginUser(user.getUsername(), NORMAL_PASSWORD);
-
-        assertThat(actual).isEqualTo(expected);
-        assertThat(this.securityContext.isUser(user.getUuid())).isTrue();
-    }
-
-    @Test
-    public void loginUser_ShouldThrowInvalidUserException_WhenGivenInvalidCredentials() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-
-        assertThatExceptionOfType(SecurityException.class)
-                .isThrownBy(() -> this.userService.loginUser(UNKNOWN_USERNAME, user.getPassword()));
-
-        assertThatExceptionOfType(SecurityException.class)
-                .isThrownBy(() -> this.userService.loginUser(user.getUsername(), UNKNOWN_PASSWORD));
-    }
-
-    @Test
-    public void logoutUser_ShouldLogoutCurrentUser() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
-
-        assertThat(this.securityContext.isLoggedIn()).isTrue();
-
-        this.userService.logoutUser();
-
-        assertThat(this.securityContext.isLoggedIn()).isFalse();
-        assertThat(this.securityContext.isUser(user.getUuid()));
     }
 
     @Test
@@ -160,8 +127,7 @@ public class UserIntegrationTests implements UserConstants {
         assertThat(actualDTO.get()).isEqualTo(expected);
 
         String encodedPassword = actualDB.get().getPassword();
-        assertThat(ENCODER.matches(NORMAL_PASSWORD, encodedPassword)).isTrue();
-        assertThat(this.securityContext.isUser(actualDTO.get().getUuid())).isTrue();
+        assertThat(this.encoder.matches(NORMAL_PASSWORD, encodedPassword)).isTrue();
     }
 
     @Test
@@ -178,7 +144,7 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void updateUserUsername_ShouldReturnModifiedUser_WhenGivenUuidAndUsername() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
+        this.loginAs(user);
 
         Optional<UserDTO> expected = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
         Optional<UserDTO> actual = this.userRepository.findByUuid(user.getUuid())
@@ -190,7 +156,7 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void updateUserUsername_ShouldNotPersistUser_WhenGivenInvalidUsername() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
+        this.loginAs(user);
 
         this.assertShouldNotPersistUser_WhenGivenInvalidUsername(username -> {
             this.userService.updateUserUsername(user.getUuid(), username);
@@ -201,7 +167,7 @@ public class UserIntegrationTests implements UserConstants {
     public void updateUserUsername_ShouldThrowSecurityException_WhenNotCalledByUser() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.userService.updateUserUsername(UUID.randomUUID(), UNKNOWN_USERNAME),
-                () -> this.loginAs(null, UserRole.STAFF),
+                () -> this.loginAs(SecurityRole.STAFF),
                 () -> this.logout()
         );
     }
@@ -209,7 +175,7 @@ public class UserIntegrationTests implements UserConstants {
     @Test
     public void updateUserPassword_ShouldPersistNewPassword_WhenGivenUuidAndPassword() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
+        this.loginAs(user);
 
         this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
@@ -217,13 +183,13 @@ public class UserIntegrationTests implements UserConstants {
         assertThat(actual.isPresent()).isTrue();
 
         String encodedPassword = actual.get().getPassword();
-        assertThat(ENCODER.matches(ANOTHER_PASSWORD, encodedPassword)).isTrue();
+        assertThat(this.encoder.matches(ANOTHER_PASSWORD, encodedPassword)).isTrue();
     }
 
     @Test
     public void updateUserPassword_ShouldNotPersistUser_WhenGivenInvalidPassword() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user.getUuid(), user.getRole());
+        this.loginAs(user);
 
         this.assertShouldNotPersistUser_WhenGivenInvalidPassword(password -> {
             this.userService.updateUserPassword(user.getUuid(), password);
@@ -234,7 +200,7 @@ public class UserIntegrationTests implements UserConstants {
     public void updateUserPassword_ShouldThrowSecurityException_WhenNotCalledByUser() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.userService.updateUserPassword(UUID.randomUUID(), UNKNOWN_PASSWORD),
-                () -> this.loginAs(null, UserRole.STAFF),
+                () -> this.loginAs(SecurityRole.STAFF),
                 () -> this.logout()
         );
     }
@@ -243,18 +209,18 @@ public class UserIntegrationTests implements UserConstants {
     public void updateUserRole_ShouldPersistNewRole_WhenGivenUuidAndPassword() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
 
-        this.userService.updateUserRole(user.getUuid(), UserRole.STAFF);
+        this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get().getRole()).isEqualByComparingTo(UserRole.STAFF);
+        assertThat(actual.get().getRole()).isEqualByComparingTo(SecurityRole.STAFF);
     }
 
     @Test
     public void updateUserRole_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.userService.updateUserRole(UUID.randomUUID(), UserRole.STAFF),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.userService.updateUserRole(UUID.randomUUID(), SecurityRole.STAFF),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -269,7 +235,7 @@ public class UserIntegrationTests implements UserConstants {
 
         assertThat(this.entityManager.contains(order)).isTrue();
 
-        this.loginAs(user.getUuid(), user.getRole());
+        this.loginAs(user);
         this.userService.removeUser(user.getUuid());
 
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
@@ -282,7 +248,7 @@ public class UserIntegrationTests implements UserConstants {
     public void removeUser_ShouldThrowSecurityException_WhenNotCalledByUser() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.userService.removeUser(UUID.randomUUID()),
-                () -> this.loginAs(null, UserRole.STAFF),
+                () -> this.loginAs(SecurityRole.STAFF),
                 () -> this.logout()
         );
     }
@@ -319,14 +285,18 @@ public class UserIntegrationTests implements UserConstants {
     }
 
     private UserDB newUserInstance(String username) {
-        String encodedPassword = ENCODER.encode(NORMAL_PASSWORD);
+        String encodedPassword = this.encoder.encode(NORMAL_PASSWORD);
 
         return new UserDB(username, encodedPassword);
     }
 
-    private void loginAs(UUID uuid, UserRole role) {
-        UUID newUUID = uuid != null ? uuid : UUID.randomUUID();
+    private void loginAs(SecurityRole role) {
+        this.defaultUser.setRole(role);
+        this.userRepository.save(this.defaultUser);
+        this.loginAs(this.defaultUser);
+    }
 
-        this.securityContext.login(newUUID, role);
+    private void loginAs(UserDB user) {
+        this.securityService.login(user.getUsername(), NORMAL_PASSWORD);
     }
 }

@@ -1,6 +1,6 @@
 package com.agenson.cinema.movie;
 
-import com.agenson.cinema.security.RestrictToStaff;
+import com.agenson.cinema.security.restriction.RestrictToStaff;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;

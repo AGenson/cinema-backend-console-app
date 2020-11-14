@@ -1,7 +1,7 @@
 package com.agenson.cinema.order;
 
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.UserRole;
+import com.agenson.cinema.security.SecurityService;
+import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
@@ -32,7 +32,7 @@ public class OrderIntegrationTests {
     private ModelMapper mapper;
 
     @Autowired
-    private SecurityContext securityContext;
+    private SecurityService securityService;
 
     @Autowired
     private EntityManager entityManager;
@@ -53,19 +53,18 @@ public class OrderIntegrationTests {
         UserDB user1 = new UserDB("username", encodedPassword);
         UserDB user2 = new UserDB("another", encodedPassword);
 
-        user1.setRole(UserRole.STAFF);
         this.entityManager.persist(user1);
         this.defaultUser = user1;
 
         this.entityManager.persist(user2);
         this.anotherUser = user2;
 
-        this.loginAs(this.defaultUser.getUuid(), this.defaultUser.getRole());
+        this.loginAs(SecurityRole.STAFF);
     }
 
     @AfterEach
     public void logout() {
-        this.securityContext.logout();
+        this.securityService.logout();
     }
 
     @Test
@@ -108,7 +107,7 @@ public class OrderIntegrationTests {
     public void findOrders_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.orderService.findOrders(),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -131,8 +130,8 @@ public class OrderIntegrationTests {
     @Test
     public void findOrders_ShouldThrowSecurityException_WhenNotCalledByUser() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.orderService.findOrders(this.defaultUser.getUuid()),
-                () -> this.loginAs(null, UserRole.STAFF),
+                () -> this.orderService.findOrders(UUID.randomUUID()),
+                () -> this.loginAs(SecurityRole.STAFF),
                 () -> this.logout()
         );
     }
@@ -166,7 +165,7 @@ public class OrderIntegrationTests {
     public void createOrder_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.orderService.createOrder(UUID.randomUUID()),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -185,14 +184,14 @@ public class OrderIntegrationTests {
     public void removeOrder_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.orderService.removeOrder(UUID.randomUUID()),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
 
-    private void loginAs(UUID uuid, UserRole role) {
-        UUID newUUID = uuid != null ? uuid : UUID.randomUUID();
-
-        this.securityContext.login(newUUID, role);
+    private void loginAs(SecurityRole role) {
+        this.defaultUser.setRole(role);
+        this.entityManager.persist(this.defaultUser);
+        this.securityService.login("username", "password");
     }
 }

@@ -2,7 +2,7 @@ package com.agenson.cinema.room;
 
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
-import com.agenson.cinema.security.RestrictToStaff;
+import com.agenson.cinema.security.restriction.RestrictToStaff;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;

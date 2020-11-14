@@ -2,8 +2,9 @@ package com.agenson.cinema.room;
 
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.UserRole;
+import com.agenson.cinema.security.SecurityService;
+import com.agenson.cinema.security.SecurityRole;
+import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.CallableTwoArguments;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,10 +40,13 @@ public class RoomIntegrationTests implements RoomConstants {
     );
 
     @Autowired
+    private BCryptPasswordEncoder encoder;
+
+    @Autowired
     private ModelMapper mapper;
 
     @Autowired
-    private SecurityContext securityContext;
+    private SecurityService securityService;
 
     @Autowired
     private EntityManager entityManager;
@@ -55,14 +60,23 @@ public class RoomIntegrationTests implements RoomConstants {
     @Autowired
     private RoomService roomService;
 
+    private UserDB defaultUser;
+
     @BeforeEach
-    public void defaultLogin() {
-        this.loginAs(UserRole.STAFF);
+    public void setup() {
+        if (this.defaultUser == null) {
+            UserDB user = new UserDB("username", this.encoder.encode("password"));
+
+            this.entityManager.persist(user);
+            this.defaultUser = user;
+        }
+
+        this.loginAs(SecurityRole.STAFF);
     }
 
     @AfterEach
     public void logout() {
-        this.securityContext.logout();
+        this.securityService.logout();
     }
 
     @Test
@@ -149,7 +163,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void createRoom_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -178,7 +192,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void updateRoomNumber_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.updateRoomNumber(UUID.randomUUID(), UNKNOWN_NUMBER),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -207,7 +221,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void updateRoomCapacity_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.updateRoomCapacity(UUID.randomUUID(), NEGATIVE_ROWS, NEGATIVE_COLS),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -246,7 +260,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void updateRoomMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.updateRoomMovie(UUID.randomUUID(), UUID.randomUUID()),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -265,7 +279,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void removeRoom_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.removeRoom(UUID.randomUUID()),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -303,7 +317,9 @@ public class RoomIntegrationTests implements RoomConstants {
         }
     }
 
-    private void loginAs(UserRole role) {
-        this.securityContext.login(UUID.randomUUID(), role);
+    private void loginAs(SecurityRole role) {
+        this.defaultUser.setRole(role);
+        this.entityManager.persist(this.defaultUser);
+        this.securityService.login("username", "password");
     }
 }

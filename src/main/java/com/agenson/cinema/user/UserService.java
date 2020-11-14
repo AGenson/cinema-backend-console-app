@@ -1,7 +1,8 @@
 package com.agenson.cinema.user;
 
-import com.agenson.cinema.security.*;
-import com.agenson.cinema.security.SecurityException;
+import com.agenson.cinema.security.restriction.RestrictToStaff;
+import com.agenson.cinema.security.restriction.RestrictToUser;
+import com.agenson.cinema.security.SecurityRole;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,11 +17,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
-    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder encoder;
 
     private final UserRepository userRepository;
-
-    private final SecurityContext securityContext;
 
     private final ModelMapper mapper;
 
@@ -37,30 +36,12 @@ public class UserService {
         return this.userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public UserDTO loginUser(String username, String password) {
-        return this.userRepository.findByUsername(username).map(user -> {
-            if (password != null && ENCODER.matches(password, user.getPassword())) {
-                this.securityContext.login(user.getUuid(), user.getRole());
-
-                return this.toDTO(user);
-            }
-
-            return null;
-        }).orElseThrow(() -> new SecurityException(SecurityException.Type.CONNECTION));
-    }
-
-    public void logoutUser() {
-        this.securityContext.logout();
-    }
-
     public UserDTO createUser(String username, String password) {
         this.validateUsername(null, username);
         this.validatePassword(password);
 
-        String encodedPassword = ENCODER.encode(password);
+        String encodedPassword = encoder.encode(password);
         UserDB user = this.userRepository.save(new UserDB(username, encodedPassword));
-
-        this.securityContext.login(user.getUuid(), user.getRole());
 
         return this.toDTO(user);
     }
@@ -80,7 +61,7 @@ public class UserService {
         return this.userRepository.findByUuid(uuid).map(user -> {
             this.validatePassword(password);
 
-            String encodedPassword = ENCODER.encode(password);
+            String encodedPassword = encoder.encode(password);
             user.setPassword(encodedPassword);
 
             return this.toDTO(this.userRepository.save(user));
@@ -88,7 +69,7 @@ public class UserService {
     }
 
     @RestrictToStaff
-    public Optional<UserDTO> updateUserRole(UUID uuid, UserRole role) {
+    public Optional<UserDTO> updateUserRole(UUID uuid, SecurityRole role) {
         return this.userRepository.findByUuid(uuid).map(user -> {
            user.setRole(role);
 

@@ -1,5 +1,8 @@
-package com.agenson.cinema.security;
+package com.agenson.cinema.security.restriction;
 
+import com.agenson.cinema.security.SecurityException;
+import com.agenson.cinema.security.SecurityRole;
+import com.agenson.cinema.security.SecurityService;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -14,15 +17,15 @@ import static java.lang.Integer.min;
 @Aspect
 @Component
 @RequiredArgsConstructor
-public class SecurityManager {
+public class RestrictionHandler {
 
-    private final SecurityContext securityContext;
+    private final SecurityService securityService;
 
     @Before("@annotation(RestrictToStaff)")
     public void restrictToStaff() throws SecurityException {
-        if (!this.securityContext.isLoggedIn())
+        if (!this.securityService.isLoggedIn())
             throw new SecurityException(SecurityException.Type.IDENTIFICATION);
-        else if (!this.securityContext.hasRole(UserRole.STAFF))
+        else if (!this.securityService.hasRole(SecurityRole.STAFF))
             throw new SecurityException(SecurityException.Type.AUTHORIZATION);
     }
 
@@ -41,9 +44,9 @@ public class SecurityManager {
             }
         }
 
-        if (!this.securityContext.isLoggedIn())
+        if (!this.securityService.isLoggedIn())
             throw new SecurityException(SecurityException.Type.IDENTIFICATION);
-        else if (!uuid.isPresent() || !this.securityContext.isUser(uuid.get()))
+        else if (!uuid.isPresent() || !this.securityService.isUser(uuid.get()))
             throw new SecurityException(SecurityException.Type.AUTHORIZATION);
     }
 }

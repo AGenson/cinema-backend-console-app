@@ -1,7 +1,8 @@
 package com.agenson.cinema.movie;
 
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.UserRole;
+import com.agenson.cinema.security.SecurityService;
+import com.agenson.cinema.security.SecurityRole;
+import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
@@ -10,10 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -30,10 +33,16 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class MovieIntegrationTests implements MovieConstants {
 
     @Autowired
+    private BCryptPasswordEncoder encoder;
+
+    @Autowired
     private ModelMapper mapper;
 
     @Autowired
-    private SecurityContext securityContext;
+    private SecurityService securityService;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private MovieRepository movieRepository;
@@ -41,14 +50,23 @@ public class MovieIntegrationTests implements MovieConstants {
     @Autowired
     private MovieService movieService;
 
+    private UserDB defaultUser;
+
     @BeforeEach
-    public void defaultLogin() {
-        this.loginAs(UserRole.STAFF);
+    public void setup() {
+        if (this.defaultUser == null) {
+            UserDB user = new UserDB("username", this.encoder.encode("password"));
+
+            this.entityManager.persist(user);
+            this.defaultUser = user;
+        }
+
+        this.loginAs(SecurityRole.STAFF);
     }
 
     @AfterEach
     public void logout() {
-        this.securityContext.logout();
+        this.securityService.logout();
     }
 
     @Test
@@ -115,7 +133,7 @@ public class MovieIntegrationTests implements MovieConstants {
     public void createMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.movieService.createMovie(NORMAL_TITLE),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -144,7 +162,7 @@ public class MovieIntegrationTests implements MovieConstants {
     public void updateMovieTitle_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.movieService.updateMovieTitle(UUID.randomUUID(), UNKNOWN_TITLE),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -162,7 +180,7 @@ public class MovieIntegrationTests implements MovieConstants {
     public void removeMovie_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.movieService.removeMovie(UUID.randomUUID()),
-                () -> this.loginAs(UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -183,7 +201,9 @@ public class MovieIntegrationTests implements MovieConstants {
         }
     }
 
-    private void loginAs(UserRole role) {
-        this.securityContext.login(UUID.randomUUID(), role);
+    private void loginAs(SecurityRole role) {
+        this.defaultUser.setRole(role);
+        this.entityManager.persist(this.defaultUser);
+        this.securityService.login("username", "password");
     }
 }

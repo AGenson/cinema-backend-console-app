@@ -1,4 +1,4 @@
-package com.agenson.cinema.security;
+package com.agenson.cinema.security.restriction;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RestrictToStaff {
+public @interface RestrictToUser {
 
+    String argName() default "uuid";
 }

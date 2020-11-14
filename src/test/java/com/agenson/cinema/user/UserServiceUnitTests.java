@@ -1,8 +1,6 @@
 package com.agenson.cinema.user;
 
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.UserRole;
-import com.agenson.cinema.security.SecurityException;
+import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.utils.CallableOneArgument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,10 +44,10 @@ public class UserServiceUnitTests implements UserConstants {
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
     @Mock
-    private ModelMapper mapper;
+    private BCryptPasswordEncoder encoder;
 
     @Mock
-    private SecurityContext securityContext;
+    private ModelMapper mapper;
 
     @Mock
     private UserRepository userRepository;
@@ -117,40 +115,10 @@ public class UserServiceUnitTests implements UserConstants {
     }
 
     @Test
-    public void loginUser_ShouldReturnUser_WhenGivenCredentials() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
-
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        UserDTO actual = this.userService.loginUser(user.getUsername(), NORMAL_PASSWORD);
-
-        assertThat(actual).isEqualTo(expected);
-    }
-
-    @Test
-    public void loginUser_ShouldThrowInvalidUserException_WhenGivenInvalidCredentials() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        when(this.userRepository.findByUsername(UNKNOWN_USERNAME)).thenReturn(Optional.empty());
-        when(this.userRepository.findByUsername(null)).thenReturn(Optional.empty());
-
-        for (String username : Arrays.asList(null, UNKNOWN_USERNAME))
-            assertThatExceptionOfType(SecurityException.class)
-                    .isThrownBy(() -> this.userService.loginUser(username, user.getPassword()))
-                    .withMessage(SecurityException.Type.CONNECTION.toString());
-
-        for (String password : Arrays.asList(null, UNKNOWN_PASSWORD))
-            assertThatExceptionOfType(SecurityException.class)
-                    .isThrownBy(() -> this.userService.loginUser(user.getUsername(), password))
-                    .withMessage(SecurityException.Type.CONNECTION.toString());
-    }
-
-    @Test
     public void createUser_ShouldReturnUser_WhenGivenCredentials() {
         when(this.userRepository.findByUsername(NORMAL_USERNAME)).thenReturn(Optional.empty());
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
+        when(this.encoder.encode(NORMAL_PASSWORD)).thenReturn(ENCODER.encode(NORMAL_PASSWORD));
 
         UserDTO actual = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
 
@@ -204,6 +172,7 @@ public class UserServiceUnitTests implements UserConstants {
 
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
+        when(this.encoder.encode(ANOTHER_PASSWORD)).thenReturn(ENCODER.encode(ANOTHER_PASSWORD));
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
         Optional<UserDTO> actual = this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
@@ -231,7 +200,7 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
 
         UserDTO expected = this.mapper.map(user, UserDTO.class);
-        Optional<UserDTO> actual = this.userService.updateUserRole(user.getUuid(), UserRole.STAFF);
+        Optional<UserDTO> actual = this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);

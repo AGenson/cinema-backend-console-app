@@ -2,8 +2,8 @@ package com.agenson.cinema.ticket;
 
 import com.agenson.cinema.order.OrderDB;
 import com.agenson.cinema.room.RoomDB;
-import com.agenson.cinema.security.SecurityContext;
-import com.agenson.cinema.security.UserRole;
+import com.agenson.cinema.security.SecurityService;
+import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.ticket.seat.Seat;
 import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.utils.CallableOneArgument;
@@ -33,10 +33,13 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class TicketIntegrationTests {
 
     @Autowired
+    private BCryptPasswordEncoder encoder;
+
+    @Autowired
     private ModelMapper mapper;
 
     @Autowired
-    private SecurityContext securityContext;
+    private SecurityService securityService;
 
     @Autowired
     private EntityManager entityManager;
@@ -59,7 +62,7 @@ public class TicketIntegrationTests {
         UserDB user = new UserDB("username", encodedPassword);
         RoomDB room = new RoomDB(99, 10, 20);
 
-        user.setRole(UserRole.STAFF);
+        user.setRole(SecurityRole.STAFF);
         OrderDB order = new OrderDB(user);
 
         this.entityManager.persist(user);
@@ -70,12 +73,12 @@ public class TicketIntegrationTests {
         this.defaultRoom = room;
         this.defaultOrder = order;
 
-        this.loginAs(this.defaultUser.getUuid(), this.defaultUser.getRole());
+        this.loginAs(this.defaultUser.getRole());
     }
 
     @AfterEach
     public void logout() {
-        this.securityContext.logout();
+        this.securityService.logout();
     }
 
     @Test
@@ -119,7 +122,7 @@ public class TicketIntegrationTests {
     public void findTickets_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.ticketService.findTickets(),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -172,7 +175,7 @@ public class TicketIntegrationTests {
     public void findRoomTickets_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.ticketService.findRoomTickets(UUID.randomUUID()),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -242,7 +245,7 @@ public class TicketIntegrationTests {
     public void removeTicket_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.ticketService.removeTicket(UUID.randomUUID()),
-                () -> this.loginAs(null, UserRole.CUSTOMER),
+                () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
     }
@@ -263,9 +266,9 @@ public class TicketIntegrationTests {
         }
     }
 
-    private void loginAs(UUID uuid, UserRole role) {
-        UUID newUUID = uuid != null ? uuid : UUID.randomUUID();
-
-        this.securityContext.login(newUUID, role);
+    private void loginAs(SecurityRole role) {
+        this.defaultUser.setRole(role);
+        this.entityManager.persist(this.defaultUser);
+        this.securityService.login("username", "password");
     }
 }

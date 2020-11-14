@@ -8,7 +8,7 @@ public class InvalidUserException extends RuntimeException {
         USERNAME_EXISTS("Error: Username is already used"),
         PASSWORD_MANDATORY("Error: Password is mandatory"),
         PASSWORD_MAXSIZE("Error: Password must be less than 16 characters"),
-        CONNECTION("Error: Username or Password is invalid");
+        PASSWORD_CONFIRM("Error: Passwords must match");
 
         private final String type;
 

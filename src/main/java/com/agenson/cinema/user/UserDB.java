@@ -1,7 +1,7 @@
 package com.agenson.cinema.user;
 
 import com.agenson.cinema.order.OrderDB;
-import com.agenson.cinema.security.UserRole;
+import com.agenson.cinema.security.SecurityRole;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -25,7 +25,7 @@ public class UserDB {
     private String password = "";
 
     @Enumerated(EnumType.ORDINAL)
-    private UserRole role = UserRole.CUSTOMER;
+    private SecurityRole role = SecurityRole.CUSTOMER;
 
     @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.REMOVE)

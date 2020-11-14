@@ -4,7 +4,7 @@ import com.agenson.cinema.order.OrderDB;
 import com.agenson.cinema.order.OrderRepository;
 import com.agenson.cinema.room.RoomDB;
 import com.agenson.cinema.room.RoomRepository;
-import com.agenson.cinema.security.RestrictToStaff;
+import com.agenson.cinema.security.restriction.RestrictToStaff;
 import com.agenson.cinema.ticket.seat.Seat;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;

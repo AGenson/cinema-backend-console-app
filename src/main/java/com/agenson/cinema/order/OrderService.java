@@ -1,7 +1,7 @@
 package com.agenson.cinema.order;
 
-import com.agenson.cinema.security.RestrictToStaff;
-import com.agenson.cinema.security.RestrictToUser;
+import com.agenson.cinema.security.restriction.RestrictToStaff;
+import com.agenson.cinema.security.restriction.RestrictToUser;
 import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.user.UserRepository;
 import lombok.RequiredArgsConstructor;

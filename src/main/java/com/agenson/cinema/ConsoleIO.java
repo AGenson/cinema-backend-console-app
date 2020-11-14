@@ -6,6 +6,7 @@ import com.agenson.cinema.order.OrderDTO;
 import com.agenson.cinema.order.OrderService;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.room.RoomService;
+import com.agenson.cinema.security.SecurityService;
 import com.agenson.cinema.ticket.TicketDTO;
 import com.agenson.cinema.ticket.TicketService;
 import com.agenson.cinema.user.UserDTO;
@@ -32,6 +33,8 @@ public class ConsoleIO implements CommandLineRunner {
 
     private final TicketService ticketService;
 
+    private final SecurityService securityService;
+
     @Override
     public void run(String... args) {
         Scanner sc = new Scanner(System.in);
@@ -50,7 +53,7 @@ public class ConsoleIO implements CommandLineRunner {
         for (RoomDTO room : roomService.findRooms())
             System.out.println(room);
 
-        this.userService.loginUser("staff", "password");
+        this.securityService.login("staff", "password");
 
         System.out.println("\nUsers:");
 

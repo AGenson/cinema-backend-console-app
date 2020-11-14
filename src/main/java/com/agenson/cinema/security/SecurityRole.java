@@ -1,6 +1,6 @@
 package com.agenson.cinema.security;
 
-public enum UserRole {
+public enum SecurityRole {
 
     CUSTOMER,
     STAFF
