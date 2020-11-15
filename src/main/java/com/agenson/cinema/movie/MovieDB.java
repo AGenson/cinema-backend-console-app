@@ -23,7 +23,7 @@ public class MovieDB {
     private String title = "";
 
     @ToString.Exclude
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "movie")
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "movie")
     private List<RoomDB> rooms = Collections.emptyList();
 
     public MovieDB(String title) {

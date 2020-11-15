@@ -19,7 +19,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 @Transactional
 @SpringBootTest
@@ -137,21 +136,6 @@ public class OrderIntegrationTests {
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void createOrder_ShouldNotPersistOrder_WhenGivenInvalidUserUuid() {
-        this.orderRepository.save(new OrderDB(this.defaultUser));
-
-        List<OrderDB> expected = this.orderRepository.findAll();
-
-        assertThatExceptionOfType(InvalidOrderException.class)
-                .isThrownBy(() -> this.orderService.createOrder(UUID.randomUUID()));
-
-        List<OrderDB> actual = this.orderRepository.findAll();
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
     }
 
     @Test

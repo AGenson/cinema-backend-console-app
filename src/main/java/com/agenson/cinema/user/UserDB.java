@@ -28,7 +28,7 @@ public class UserDB {
     private SecurityRole role = SecurityRole.CUSTOMER;
 
     @ToString.Exclude
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.REMOVE)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user", cascade = CascadeType.REMOVE)
     private List<OrderDB> orders = Collections.emptyList();
 
     public UserDB(String username, String password) {

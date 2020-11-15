@@ -28,6 +28,8 @@ public class ManageMovieView extends AbstractStateView<MovieDTO> {
     protected void printContent() {
         System.out.println("Title: " + this.state + "\n");
 
+        System.out.println("(Removing a movie will remove all associated tickets)\n");
+
         System.out.println("Please select an action:");
         System.out.println("[0] - Go back");
         System.out.println("[1] - Edit Movie");

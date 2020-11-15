@@ -1,6 +1,7 @@
 package com.agenson.cinema.console.views;
 
 import com.agenson.cinema.console.template.AbstractStatelessView;
+import com.agenson.cinema.console.views.customer.ProfileView;
 import com.agenson.cinema.console.views.customer.catalog.MovieCatalogView;
 import com.agenson.cinema.console.views.identification.IdentificationView;
 import com.agenson.cinema.console.views.management.StaffMenuView;
@@ -21,6 +22,8 @@ public class MainMenuView extends AbstractStatelessView {
 
     private final MovieCatalogView movieCatalogView;
 
+    private final ProfileView profileView;
+
     @Override
     protected String getTitle() {
         return "Main Menu";
@@ -37,12 +40,14 @@ public class MainMenuView extends AbstractStatelessView {
 
         System.out.println("[1] - See movie catalog");
 
-        if (this.securityService.isLoggedIn())
-            System.out.println("[2] - Log out");
-        else
+        if (this.securityService.isLoggedIn()) {
+            System.out.println("[2] - See Profile");
+            System.out.println("[3] - Log out");
+            System.out.println("[4] - Leave\n");
+        } else {
             System.out.println("[2] - Identify");
-
-        System.out.println("[3] - Leave\n");
+            System.out.println("[3] - Leave\n");
+        }
     }
 
     @Override
@@ -59,14 +64,23 @@ public class MainMenuView extends AbstractStatelessView {
 
             case "2":
                 if (this.securityService.isLoggedIn())
-                    this.securityService.logout();
+                    this.profileView.handler();
                 else
                     this.identificationView.handler();
                 break;
 
             case "3":
-                this.setStayInView(false);;
+                if (this.securityService.isLoggedIn())
+                    this.securityService.logout();
+                else
+                    this.setStayInView(false);
                 break;
+
+            case "4":
+                if (this.securityService.isLoggedIn()) {
+                    this.setStayInView(false);
+                    break;
+                }
 
             case "0":
                 if (this.securityService.hasRole(SecurityRole.STAFF)) {

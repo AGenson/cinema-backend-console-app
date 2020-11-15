@@ -1,6 +1,8 @@
 package com.agenson.cinema.movie;
 
+import com.agenson.cinema.room.RoomService;
 import com.agenson.cinema.security.restriction.RestrictToStaff;
+import com.agenson.cinema.ticket.TicketDB;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,8 @@ import java.util.stream.Collectors;
 public class MovieService {
 
     private final MovieRepository movieRepository;
+
+    private final RoomService roomService;
 
     public Optional<MovieDTO> findMovie(UUID uuid) {
         return this.movieRepository.findByUuid(uuid).map(MovieDTO::new);
@@ -46,7 +50,10 @@ public class MovieService {
 
     @RestrictToStaff
     public void removeMovie(UUID uuid) {
-        this.movieRepository.deleteByUuid(uuid);
+        this.movieRepository.findByUuid(uuid).ifPresent(movie -> {
+            movie.getRooms().forEach(room -> this.roomService.updateRoomMovie(room.getUuid(), null));
+            this.movieRepository.delete(movie);
+        });
     }
 
     private void validateTitle(UUID uuid, String title) {

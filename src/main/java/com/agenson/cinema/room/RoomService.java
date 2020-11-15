@@ -2,7 +2,9 @@ package com.agenson.cinema.room;
 
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
+import com.agenson.cinema.order.OrderRepository;
 import com.agenson.cinema.security.restriction.RestrictToStaff;
+import com.agenson.cinema.ticket.TicketDB;
 import com.agenson.cinema.ticket.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,8 @@ public class RoomService {
     private final MovieRepository movieRepository;
 
     private final TicketRepository ticketRepository;
+
+    private final OrderRepository orderRepository;
 
     public Optional<RoomDTO> findRoom(UUID uuid) {
         return this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
@@ -77,9 +81,14 @@ public class RoomService {
         return this.roomRepository.findByUuid(uuid).map(room -> {
             Optional<MovieDB> movie = this.movieRepository.findByUuid(movieUuid);
 
-            if (movie.isPresent()) {
-                room.setMovie(movie.get());
-                room.getTickets().forEach(ticket -> this.ticketRepository.deleteByUuid(ticket.getUuid()));
+            if (movieUuid == null || movie.isPresent()) {
+                room.setMovie((movieUuid == null) ? null : movie.get());
+                room.getTickets().stream()
+                        .peek(ticket -> this.ticketRepository.deleteByUuid(ticket.getUuid()))
+                        .map(TicketDB::getOrder).distinct().forEach(order -> {
+                            this.orderRepository.deleteByUuid(order.getUuid());
+                        });
+                room.setTickets(Collections.emptyList());
 
                 return new RoomDTO(this.roomRepository.save(room));
             } else throw new InvalidRoomException(InvalidRoomException.Type.MOVIE);
