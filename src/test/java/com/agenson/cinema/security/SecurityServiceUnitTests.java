@@ -55,7 +55,7 @@ public class SecurityServiceUnitTests implements UserConstants {
 
         assertThat(actual).isEqualTo(expected);
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isTrue();
+        assertThat(this.securityService.getCurrentUser()).isNotEmpty();
         assertThat(actual).isEqualTo(this.securityService.getCurrentUser().get());
     }
 
@@ -74,7 +74,7 @@ public class SecurityServiceUnitTests implements UserConstants {
                     .isThrownBy(() -> this.securityService.login(NORMAL_USERNAME, password))
                     .withMessage(SecurityException.Type.CONNECTION.toString());
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isFalse();
+        assertThat(this.securityService.getCurrentUser()).isEmpty();
     }
 
     @Test
@@ -114,10 +114,10 @@ public class SecurityServiceUnitTests implements UserConstants {
     public void logout_ShouldSetCurrentUserToNull() {
         this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isTrue();
+        assertThat(this.securityService.getCurrentUser()).isNotEmpty();
 
         this.securityService.logout();
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isFalse();
+        assertThat(this.securityService.getCurrentUser()).isEmpty();
     }
 }

@@ -55,7 +55,7 @@ public class SecurityIntegrationTests implements UserConstants {
 
         assertThat(actual).isEqualTo(expected);
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isTrue();
+        assertThat(this.securityService.getCurrentUser()).isNotEmpty();
         assertThat(actual).isEqualTo(this.securityService.getCurrentUser().get());
     }
 
@@ -71,6 +71,6 @@ public class SecurityIntegrationTests implements UserConstants {
                     .isThrownBy(() -> this.securityService.login(NORMAL_USERNAME, password))
                     .withMessage(SecurityException.Type.CONNECTION.toString());
 
-        assertThat(this.securityService.getCurrentUser().isPresent()).isFalse();
+        assertThat(this.securityService.getCurrentUser()).isEmpty();
     }
 }
