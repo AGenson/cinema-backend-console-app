@@ -4,7 +4,7 @@ public class InvalidSeatException extends RuntimeException {
 
     public enum Type {
         ROW("Error: Seat row must be between A & Z"),
-        COL("Error: Seat column must be between 1 & " + Seat.MAX_COL),
+        COL("Error: Seat column is out of boundary"),
         FORMAT("Error: Invalid format for seat");
 
         private final String type;

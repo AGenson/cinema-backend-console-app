@@ -42,7 +42,9 @@ public class SignUpView extends AbstractStatelessView {
             this.securityService.login(username, password);
         } catch (InvalidUserException ex) {
             System.out.println("\n" + ex.getMessage());
-            this.askRetry();
+
+            if (this.ask("Retry?"))
+                this.setStayInView(true);
         }
     }
 }

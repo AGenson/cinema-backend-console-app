@@ -1,6 +1,7 @@
 package com.agenson.cinema.console.views.management.rooms;
 
 import com.agenson.cinema.console.template.AbstractListView;
+import com.agenson.cinema.console.template.RatioFormatter;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.room.RoomService;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +29,6 @@ public class ManageRoomsView extends AbstractListView<RoomDTO> {
         return "Manage Rooms";
     }
 
-    private String formatRatio(int value, int max) {
-        double result = (value * 1.0) / max * 100;
-
-        return String.format("%d/%d (%.02f%%)", value, max, result);
-    }
-
     @Override
     protected void printContent() {
         System.out.println("Please select an action or room:");
@@ -47,11 +42,11 @@ public class ManageRoomsView extends AbstractListView<RoomDTO> {
 
             if (room.getMovie() != null) {
                 System.out.println("    > Movie: " + room.getMovie());
-                System.out.println("    > Reserved: " + this.formatRatio(
+                System.out.println("    > Reserved: " + RatioFormatter.format(
                         room.getTickets().size(),
                         room.getCapacity()
                 ));
-                System.out.println("    > Income ($): " + this.formatRatio(
+                System.out.println("    > Income ($): " + RatioFormatter.format(
                         room.getIncome(),
                         room.getPotentialIncome()
                 ));

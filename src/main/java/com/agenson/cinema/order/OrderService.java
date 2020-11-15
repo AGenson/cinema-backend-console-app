@@ -37,7 +37,7 @@ public class OrderService {
                 .orElse(Collections.emptyList());
     }
 
-    @RestrictToStaff
+    @RestrictToUser(argName = "userUuid")
     public OrderDTO createOrder(UUID userUuid) {
         return this.userRepository.findByUuid(userUuid).map(user -> {
             OrderDB order = this.orderRepository.save(new OrderDB(user));

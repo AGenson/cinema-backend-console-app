@@ -26,13 +26,12 @@ public abstract class AbstractView {
         return this.getInput("Input");
     }
 
-    protected void askRetry() {
-        System.out.println("Retry? (y/yes or n/no)");
+    protected boolean ask(String question) {
+        System.out.println(question + " (y/yes or n/no)");
 
         String input = this.getInput().toLowerCase();
 
-        if ("y".equals(input) || "yes".equals(input))
-            this.setStayInView(true);
+        return ("y".equals(input) || "yes".equals(input));
     }
 
     protected void informError() {

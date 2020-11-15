@@ -1,6 +1,7 @@
 package com.agenson.cinema.console.views.customer.catalog;
 
 import com.agenson.cinema.console.template.AbstractListView;
+import com.agenson.cinema.console.template.RatioFormatter;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.room.RoomService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,8 @@ public class MovieCatalogView extends AbstractListView<RoomDTO> {
     private static final int OFFSET = 1;
 
     private final RoomService roomService;
+
+    private final MovieSelectionView movieSelectionView;
 
     @Override
     protected void refreshList() {
@@ -32,8 +35,14 @@ public class MovieCatalogView extends AbstractListView<RoomDTO> {
         System.out.println("[0] - Go back");
 
         for (int i = 0; i < this.list.size(); i++) {
-            System.out.println("\n[" + (i + OFFSET) + "] - Room: " + this.list.get(i).getNumber());
-            System.out.println("    > Movie: " + this.list.get(i).getMovie().getTitle());
+            RoomDTO room = this.list.get(i);
+
+            System.out.println("\n[" + (i + OFFSET) + "] - Room: " + room.getNumber());
+            System.out.println("    > Movie: " + room.getMovie().getTitle());
+            System.out.println("    > Reserved: " + RatioFormatter.format(
+                    room.getTickets().size(),
+                    room.getCapacity()
+            ));
         }
 
         System.out.println();
@@ -50,7 +59,8 @@ public class MovieCatalogView extends AbstractListView<RoomDTO> {
             if (value == 0)
                 this.setStayInView(false);
             else if (value >= OFFSET && value < this.list.size() + OFFSET) {
-                System.out.println("Selecting Movie...");
+                this.movieSelectionView.handler(this.list.get(value - OFFSET));
+                this.refreshList();
             } else
                 throw new NumberFormatException();
         } catch (NumberFormatException ex) {
