@@ -11,6 +11,21 @@ Environment used to develop:
 - Java 1.8
 - Linux
 
+## Usage
+
+To build the project:
+```shell script
+./gradlew clean
+./gradlew build
+```
+
+The `build` script will generate a JAR file: `./build/libs/cinema-${__VERSION__}.jar`
+
+An example to run the program:
+```shell script
+java -jar ./build/libs/cinema-1.0.0-SNAPSHOT.jar
+```
+
 ## Credentials
 
 There are 2 users already in the in-memory database:
@@ -41,9 +56,7 @@ You can find below a menu map to help you navigate.
     - Movie selection:
         - Select seats & Order
             - **Order confirmation**
-- Identify
-    - Sign up
-    - Log in
+- Log out
 - See Profile *(info & orders)*
 - Leave
 
