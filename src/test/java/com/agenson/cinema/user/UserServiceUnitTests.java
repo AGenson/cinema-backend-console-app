@@ -1,7 +1,6 @@
 package com.agenson.cinema.user;
 
 import com.agenson.cinema.security.SecurityRole;
-import com.agenson.cinema.utils.CallableOneArgument;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +21,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class UserServiceUnitTests implements UserConstants {
 
+    private static final String NORMAL_PASSWORD_ENCODED = new BCryptPasswordEncoder().encode(NORMAL_PASSWORD);
+
     private static final HashMap<String, InvalidUserException.Type> INVALID_USER_USERNAMES =
             new HashMap<String, InvalidUserException.Type>() {{
                 put(null, InvalidUserException.Type.USERNAME_MANDATORY);
@@ -37,8 +38,6 @@ public class UserServiceUnitTests implements UserConstants {
                 put(MAX_SIZE_PASSWORD, InvalidUserException.Type.PASSWORD_MAXSIZE);
             }};
 
-    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
-
     @Mock
     private BCryptPasswordEncoder encoder;
 
@@ -50,30 +49,31 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void findUser_ShouldReturnUser_WhenGivenUuid() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
+        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD_ENCODED);
 
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
 
         UserCompleteDTO expected = new UserCompleteDTO(user);
         Optional<UserCompleteDTO> actual = this.userService.findUser(user.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
+    // Mock test only: will throw SecurityException when not logged in as user
     public void findUser_ShouldReturnNull_WhenGivenUnknownUuid() {
         when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
 
-        assertThat(this.userService.findUser(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.userService.findUser((UUID) null).isPresent()).isFalse();
+        assertThat(this.userService.findUser(UUID.randomUUID())).isEmpty();
+        assertThat(this.userService.findUser(null)).isEmpty();
     }
 
     @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
-                this.newUserInstance(NORMAL_USERNAME),
-                this.newUserInstance(ANOTHER_USERNAME)
+                new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD_ENCODED),
+                new UserDB(ANOTHER_USERNAME, NORMAL_PASSWORD_ENCODED)
         );
 
         when(this.userRepository.findAll()).thenReturn(userList);
@@ -89,7 +89,7 @@ public class UserServiceUnitTests implements UserConstants {
     public void createUser_ShouldReturnUser_WhenGivenCredentials() {
         when(this.userRepository.findByUsername(NORMAL_USERNAME)).thenReturn(Optional.empty());
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
-        when(this.encoder.encode(NORMAL_PASSWORD)).thenReturn(ENCODER.encode(NORMAL_PASSWORD));
+        when(this.encoder.encode(NORMAL_PASSWORD)).thenReturn(NORMAL_PASSWORD_ENCODED);
 
         UserBasicDTO actual = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
 
@@ -99,104 +99,35 @@ public class UserServiceUnitTests implements UserConstants {
 
     @Test
     public void createUser_ShouldThrowAssociatedInvalidUserException_WhenGivenInvalidCredentials() {
-        this.assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(username -> {
-            this.userService.createUser(username, NORMAL_PASSWORD);
-        });
-
-        when(this.userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
-        this.assertShouldThrowInvalidUserException_WhenGivenInvalidPassword(password -> {
-            this.userService.createUser(NORMAL_USERNAME, password);
-        });
-    }
-
-    @Test
-    public void updateUserUsername_ShouldReturnModifiedUser_WhenGivenUuidAndUsername() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
-        when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
-        when(this.userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
-
-        Optional<UserBasicDTO> actual = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get().getUsername()).isEqualTo(ANOTHER_USERNAME);
-    }
-
-    @Test
-    public void updateUserUsername_ShouldThrowAssociatedInvalidMovieException_WhenGivenInvalidUsername() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
-
-        this.assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(username -> {
-            this.userService.updateUserUsername(user.getUuid(), username);
-        });
-    }
-
-    @Test
-    public void updateUserPassword_ShouldReturnUser_WhenGivenUuidAndPassword() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
-        when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
-        when(this.encoder.encode(ANOTHER_PASSWORD)).thenReturn(ENCODER.encode(ANOTHER_PASSWORD));
-
-        UserBasicDTO expected = new UserBasicDTO(user);
-        Optional<UserBasicDTO> actual = this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void updateUserPassword_ShouldThrowAssociatedInvalidUserException_WhenGivenInvalidPassword() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.of(user));
-
-        this.assertShouldThrowInvalidUserException_WhenGivenInvalidPassword(password -> {
-            this.userService.updateUserPassword(user.getUuid(), password);
-        });
-    }
-
-    @Test
-    public void updateUserRole_ShouldReturnUser_WhenGivenUuidAndRole() {
-        UserDB user = this.newUserInstance(NORMAL_USERNAME);
-
-        when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
-        when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
-
-        UserBasicDTO expected = new UserBasicDTO(user);
-        Optional<UserBasicDTO> actual = this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    private void assertShouldThrowInvalidUserException_WhenGivenInvalidUsername(CallableOneArgument<String> callable) {
         when(this.userRepository.findByUsername(anyString())).thenAnswer(invocation -> {
-            UserDB userWithSameUsername = this.newUserInstance(invocation.getArgument(0));
+            UserDB userWithSameUsername = new UserDB(invocation.getArgument(0), NORMAL_PASSWORD_ENCODED);
 
             return Optional.of(userWithSameUsername);
         });
 
         for (Map.Entry<String, InvalidUserException.Type> pair : INVALID_USER_USERNAMES.entrySet())
             assertThatExceptionOfType(InvalidUserException.class)
-                    .isThrownBy(() -> callable.call(pair.getKey()))
+                    .isThrownBy(() -> this.userService.createUser(pair.getKey(), NORMAL_PASSWORD))
                     .withMessage(pair.getValue().toString());
-    }
 
-    private void assertShouldThrowInvalidUserException_WhenGivenInvalidPassword(CallableOneArgument<String> callable) {
+        when(this.userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
+
         for (Map.Entry<String, InvalidUserException.Type> pair : INVALID_USER_PASSWORDS.entrySet())
             assertThatExceptionOfType(InvalidUserException.class)
-                    .isThrownBy(() -> callable.call(pair.getKey()))
+                    .isThrownBy(() -> this.userService.createUser(NORMAL_USERNAME, pair.getKey()))
                     .withMessage(pair.getValue().toString());
     }
 
-    private UserDB newUserInstance(String username) {
-        String encodedPassword = ENCODER.encode(NORMAL_PASSWORD);
+    @Test
+    public void updateUserRole_ShouldReturnUser_WhenGivenUuidAndRole() {
+        UserDB user = new UserDB(NORMAL_USERNAME, NORMAL_PASSWORD_ENCODED);
 
-        return new UserDB(username, encodedPassword);
+        when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
+        when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
+
+        Optional<UserDetailsDTO> actual = this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
+
+        assertThat(actual).isNotEmpty();
+        assertThat(actual.get().getRole()).isEqualTo(SecurityRole.STAFF);
     }
 }

@@ -31,7 +31,7 @@ public class UserService {
     }
 
     public UserBasicDTO createUser(String username, String password) {
-        this.validateUsername(null, username);
+        this.validateUsername(username);
         this.validatePassword(password);
 
         String encodedPassword = encoder.encode(password);
@@ -40,55 +40,24 @@ public class UserService {
         return new UserBasicDTO(user);
     }
 
-    @RestrictToUser
-    public Optional<UserBasicDTO> updateUserUsername(UUID uuid, String username) {
-        return this.userRepository.findByUuid(uuid).map(user -> {
-            this.validateUsername(uuid, username);
-            user.setUsername(username);
-
-            return new UserBasicDTO(this.userRepository.save(user));
-        });
-    }
-
-    @RestrictToUser
-    public Optional<UserBasicDTO> updateUserPassword(UUID uuid, String password) {
-        return this.userRepository.findByUuid(uuid).map(user -> {
-            this.validatePassword(password);
-
-            String encodedPassword = encoder.encode(password);
-            user.setPassword(encodedPassword);
-
-            return new UserBasicDTO(this.userRepository.save(user));
-        });
-    }
-
     @RestrictToStaff
-    public Optional<UserBasicDTO> updateUserRole(UUID uuid, SecurityRole role) {
+    public Optional<UserDetailsDTO> updateUserRole(UUID uuid, SecurityRole role) {
         return this.userRepository.findByUuid(uuid).map(user -> {
            user.setRole(role);
 
-           return new UserBasicDTO(this.userRepository.save(user));
+           return new UserDetailsDTO(this.userRepository.save(user));
         });
     }
 
-    @RestrictToUser
-    public void removeUser(UUID uuid) {
-        this.userRepository.deleteByUuid(uuid);
-    }
-
-    private void validateUsername(UUID uuid, String username) {
+    private void validateUsername(String username) {
         if (username == null)
             throw new InvalidUserException(InvalidUserException.Type.USERNAME_MANDATORY);
         else if (username.trim().length() == 0)
             throw new InvalidUserException(InvalidUserException.Type.USERNAME_MANDATORY);
         else if (username.trim().length() > 16)
             throw new InvalidUserException(InvalidUserException.Type.USERNAME_MAXSIZE);
-        else {
-            this.userRepository.findByUsername(username).ifPresent(userWithSameUsername -> {
-                if (uuid == null || userWithSameUsername.getUuid() != uuid)
-                    throw new InvalidUserException(InvalidUserException.Type.USERNAME_EXISTS);
-            });
-        }
+        else if (this.userRepository.findByUsername(username).isPresent())
+            throw new InvalidUserException(InvalidUserException.Type.USERNAME_EXISTS);
     }
 
     private void validatePassword(String password) {

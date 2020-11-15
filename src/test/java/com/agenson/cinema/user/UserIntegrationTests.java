@@ -1,9 +1,7 @@
 package com.agenson.cinema.user;
 
-import com.agenson.cinema.order.OrderDB;
 import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.security.SecurityService;
-import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +13,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -38,9 +35,6 @@ public class UserIntegrationTests implements UserConstants {
     private SecurityService securityService;
 
     @Autowired
-    private EntityManager entityManager;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -48,9 +42,12 @@ public class UserIntegrationTests implements UserConstants {
 
     private UserDB defaultUser;
 
+    private String defaultPasswordEncoded;
+
     @BeforeEach
     public void setup() {
-        this.defaultUser = this.userRepository.save(this.newUserInstance(UNKNOWN_USERNAME));
+        this.defaultPasswordEncoded = this.encoder.encode(NORMAL_PASSWORD);
+        this.defaultUser = this.userRepository.save(new UserDB(UNKNOWN_USERNAME, this.defaultPasswordEncoded));
 
         this.loginAs(SecurityRole.STAFF);
     }
@@ -62,27 +59,27 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void findUser_ShouldReturnPersistedUser_WhenGivenUuid() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
+        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, this.defaultPasswordEncoded));
         this.loginAs(user);
 
         UserCompleteDTO expected = new UserCompleteDTO(user);
         Optional<UserCompleteDTO> actual = this.userService.findUser(user.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
-                this.newUserInstance(NORMAL_USERNAME),
-                this.newUserInstance(ANOTHER_USERNAME),
+                new UserDB(NORMAL_USERNAME, this.defaultPasswordEncoded),
+                new UserDB(ANOTHER_USERNAME, this.defaultPasswordEncoded),
                 this.defaultUser
         );
 
-        assertThat(this.userRepository.findAll().size()).isEqualTo(1);
-
         this.userRepository.saveAll(userList);
+
+        assertThat(this.userRepository.findAll().size()).isEqualTo(userList.size());
 
         List<UserDetailsDTO> actual = this.userService.findUsers();
         List<UserDetailsDTO> expected = userList.stream().map(UserDetailsDTO::new).collect(Collectors.toList());
@@ -107,7 +104,7 @@ public class UserIntegrationTests implements UserConstants {
         Optional<UserDB> actualDB = this.userRepository.findByUuid(expected.getUuid());
         Optional<UserBasicDTO> actualDTO = actualDB.map(UserBasicDTO::new);
 
-        assertThat(actualDTO.isPresent()).isTrue();
+        assertThat(actualDTO).isNotEmpty();
         assertThat(actualDTO.get()).isEqualTo(expected);
 
         String encodedPassword = actualDB.get().getPassword();
@@ -115,82 +112,41 @@ public class UserIntegrationTests implements UserConstants {
     }
 
     @Test
-    public void createUser_ShouldNotPersistUser_WhenGivenInvalidCredentials() {
-        this.assertShouldNotPersistUser_WhenGivenInvalidUsername(username -> {
-            this.userService.createUser(username, NORMAL_PASSWORD);
-        });
+    public void createUser_ShouldNotPersistUser_WhenGivenInvalidUsername() {
+        if (!this.userRepository.findByUsername(ANOTHER_USERNAME).isPresent())
+            this.userRepository.save(new UserDB(ANOTHER_USERNAME, this.defaultPasswordEncoded));
 
-        this.assertShouldNotPersistUser_WhenGivenInvalidPassword(password -> {
-            this.userService.createUser(NORMAL_USERNAME, password);
-        });
+        List<UserDB> expected = this.userRepository.findAll();
+
+        for (String username : Arrays.asList(null, EMPTY_USERNAME, MAX_SIZE_USERNAME, ANOTHER_USERNAME)) {
+            assertThatExceptionOfType(InvalidUserException.class)
+                    .isThrownBy(() -> this.userService.createUser(username, NORMAL_PASSWORD));
+
+            List<UserDB> actual = this.userRepository.findAll();
+
+            assertThat(actual.size()).isEqualTo(expected.size());
+            assertThat(actual).containsOnlyOnceElementsOf(expected);
+        }
     }
 
     @Test
-    public void updateUserUsername_ShouldReturnModifiedUser_WhenGivenUuidAndUsername() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user);
+    public void createUser_ShouldNotPersistUser_WhenGivenInvalidPassword() {
+        List<UserDB> expected = this.userRepository.findAll();
 
-        Optional<UserBasicDTO> expected = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
-        Optional<UserBasicDTO> actual = this.userRepository.findByUuid(user.getUuid()).map(UserBasicDTO::new);
+        for (String password : Arrays.asList(null, EMPTY_PASSWORD, MAX_SIZE_PASSWORD)) {
+            assertThatExceptionOfType(InvalidUserException.class)
+                    .isThrownBy(() -> this.userService.createUser(NORMAL_USERNAME, password));
 
-        assertThat(actual).isEqualTo(expected);
-    }
+            List<UserDB> actual = this.userRepository.findAll();
 
-    @Test
-    public void updateUserUsername_ShouldNotPersistUser_WhenGivenInvalidUsername() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user);
-
-        this.assertShouldNotPersistUser_WhenGivenInvalidUsername(username -> {
-            this.userService.updateUserUsername(user.getUuid(), username);
-        });
-    }
-
-    @Test
-    public void updateUserUsername_ShouldThrowSecurityException_WhenNotCalledByUser() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.userService.updateUserUsername(UUID.randomUUID(), UNKNOWN_USERNAME),
-                () -> this.loginAs(SecurityRole.STAFF),
-                () -> this.logout()
-        );
-    }
-
-    @Test
-    public void updateUserPassword_ShouldPersistNewPassword_WhenGivenUuidAndPassword() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user);
-
-        this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
-        Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-
-        String encodedPassword = actual.get().getPassword();
-        assertThat(this.encoder.matches(ANOTHER_PASSWORD, encodedPassword)).isTrue();
-    }
-
-    @Test
-    public void updateUserPassword_ShouldNotPersistUser_WhenGivenInvalidPassword() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        this.loginAs(user);
-
-        this.assertShouldNotPersistUser_WhenGivenInvalidPassword(password -> {
-            this.userService.updateUserPassword(user.getUuid(), password);
-        });
-    }
-
-    @Test
-    public void updateUserPassword_ShouldThrowSecurityException_WhenNotCalledByUser() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.userService.updateUserPassword(UUID.randomUUID(), UNKNOWN_PASSWORD),
-                () -> this.loginAs(SecurityRole.STAFF),
-                () -> this.logout()
-        );
+            assertThat(actual.size()).isEqualTo(expected.size());
+            assertThat(actual).containsOnlyOnceElementsOf(expected);
+        }
     }
 
     @Test
     public void updateUserRole_ShouldPersistNewRole_WhenGivenUuidAndPassword() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
+        UserDB user = this.userRepository.save(new UserDB(NORMAL_USERNAME, this.defaultPasswordEncoded));
 
         this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
         Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
@@ -206,71 +162,6 @@ public class UserIntegrationTests implements UserConstants {
                 () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
-    }
-
-    @Test
-    public void removeUser_ShouldRemoveUserAndOrder_WhenGivenUuid() {
-        UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
-        OrderDB order = new OrderDB(user);
-
-        this.entityManager.persist(order);
-        this.entityManager.refresh(user);
-
-        assertThat(this.entityManager.contains(order)).isTrue();
-
-        this.loginAs(user);
-        this.userService.removeUser(user.getUuid());
-
-        Optional<UserDB> actual = this.userRepository.findByUuid(user.getUuid());
-
-        assertThat(actual.isPresent()).isFalse();
-        assertThat(this.entityManager.contains(order)).isFalse();
-    }
-
-    @Test
-    public void removeUser_ShouldThrowSecurityException_WhenNotCalledByUser() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.userService.removeUser(UUID.randomUUID()),
-                () -> this.loginAs(SecurityRole.STAFF),
-                () -> this.logout()
-        );
-    }
-
-    private void assertShouldNotPersistUser_WhenGivenInvalidUsername(CallableOneArgument<String> callable) {
-        if (!this.userRepository.findByUsername(ANOTHER_USERNAME).isPresent())
-            this.userRepository.save(this.newUserInstance(ANOTHER_USERNAME));
-
-        List<UserDB> expected = this.userRepository.findAll();
-
-        for (String username : Arrays.asList(null, EMPTY_USERNAME, MAX_SIZE_USERNAME, ANOTHER_USERNAME)) {
-            assertThatExceptionOfType(InvalidUserException.class)
-                    .isThrownBy(() -> callable.call(username));
-
-            List<UserDB> actual = this.userRepository.findAll();
-
-            assertThat(actual.size()).isEqualTo(expected.size());
-            assertThat(actual).containsOnlyOnceElementsOf(expected);
-        }
-    }
-
-    private void assertShouldNotPersistUser_WhenGivenInvalidPassword(CallableOneArgument<String> callable) {
-        List<UserDB> expected = this.userRepository.findAll();
-
-        for (String username : Arrays.asList(null, EMPTY_PASSWORD, MAX_SIZE_PASSWORD)) {
-            assertThatExceptionOfType(InvalidUserException.class)
-                    .isThrownBy(() -> callable.call(username));
-
-            List<UserDB> actual = this.userRepository.findAll();
-
-            assertThat(actual.size()).isEqualTo(expected.size());
-            assertThat(actual).containsOnlyOnceElementsOf(expected);
-        }
-    }
-
-    private UserDB newUserInstance(String username) {
-        String encodedPassword = this.encoder.encode(NORMAL_PASSWORD);
-
-        return new UserDB(username, encodedPassword);
     }
 
     private void loginAs(SecurityRole role) {

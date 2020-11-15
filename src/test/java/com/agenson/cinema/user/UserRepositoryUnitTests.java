@@ -1,6 +1,5 @@
 package com.agenson.cinema.user;
 
-import com.agenson.cinema.order.OrderDB;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +28,7 @@ public class UserRepositoryUnitTests implements UserConstants {
     @Autowired
     private UserRepository userRepository;
 
-    private UserDB expected;
+    private UserDB expected = null;
 
     @BeforeEach
     public void setup() {
@@ -40,7 +39,7 @@ public class UserRepositoryUnitTests implements UserConstants {
     public void findByUuid_ShouldReturnUser_WhenGivenPersistedUuid() {
         Optional<UserDB> actual = this.userRepository.findByUuid(this.expected.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -48,14 +47,14 @@ public class UserRepositoryUnitTests implements UserConstants {
     public void findByUuid_ShouldReturnNull_WhenGivenUnknownUuid() {
         Optional<UserDB> actual = this.userRepository.findByUuid(UUID.randomUUID());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
     public void findByUsername_ShouldReturnMovie_WhenGivenPersistedUsername() {
         Optional<UserDB> actual = this.userRepository.findByUsername(this.expected.getUsername());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -63,34 +62,6 @@ public class UserRepositoryUnitTests implements UserConstants {
     public void findByUsername_ShouldReturnNull_WhenGivenUnknownUsername() {
         Optional<UserDB> actual = this.userRepository.findByUsername(UNKNOWN_USERNAME);
 
-        assertThat(actual.isPresent()).isFalse();
-    }
-
-    @Test
-    public void deleteByUuid_ShouldDeleteUser_WhenGivenUuid() {
-        this.userRepository.deleteByUuid(this.expected.getUuid());
-
-        Optional<UserDB> actual = this.userRepository.findById(this.expected.getId());
-
-        assertThat(actual.isPresent()).isFalse();
-    }
-
-    @Test
-    public void deleteByUuid_ShouldDeleteOrders_WhenGiven_Uuid() {
-        OrderDB order = new OrderDB(this.expected);
-
-        order = this.entityManager.persist(order);
-
-        this.entityManager.refresh(this.expected);
-        this.entityManager.refresh(order);
-
-        assertThat(this.entityManager.find(OrderDB.class, order.getId())).isNotNull();
-        assertThat(this.expected.getOrders()).containsOnly(order);
-        assertThat(order.getUser()).isEqualTo(this.expected);
-
-        this.userRepository.deleteByUuid(this.expected.getUuid());
-        this.entityManager.flush();
-
-        assertThat(this.entityManager.find(OrderDB.class, order.getId())).isNull();
+        assertThat(actual).isEmpty();
     }
 }
