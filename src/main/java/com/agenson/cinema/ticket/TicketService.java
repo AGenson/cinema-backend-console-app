@@ -7,7 +7,6 @@ import com.agenson.cinema.room.RoomRepository;
 import com.agenson.cinema.security.restriction.RestrictToStaff;
 import com.agenson.cinema.ticket.seat.Seat;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -26,31 +25,29 @@ public class TicketService {
 
     private final OrderRepository orderRepository;
 
-    private final ModelMapper mapper;
-
-    public Optional<TicketDTO> findTicket(UUID uuid) {
-        return this.ticketRepository.findByUuid(uuid).map(this::toDTO);
+    public Optional<TicketDetailsDTO> findTicket(UUID uuid) {
+        return this.ticketRepository.findByUuid(uuid).map(TicketDetailsDTO::new);
     }
 
     @RestrictToStaff
-    public List<TicketDTO> findTickets() {
-        return this.ticketRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+    public List<TicketDetailsDTO> findTickets() {
+        return this.ticketRepository.findAll().stream().map(TicketDetailsDTO::new).collect(Collectors.toList());
     }
 
-    public List<TicketDTO> findOrderTickets(UUID uuid) {
+    public List<TicketDetailsDTO> findOrderTickets(UUID uuid) {
         return this.orderRepository.findByUuid(uuid).map(OrderDB::getTickets)
-                .map(tickets -> tickets.stream().map(this::toDTO).collect(Collectors.toList()))
+                .map(tickets -> tickets.stream().map(TicketDetailsDTO::new).collect(Collectors.toList()))
                 .orElse(Collections.emptyList());
     }
 
     @RestrictToStaff
-    public List<TicketDTO> findRoomTickets(UUID uuid) {
+    public List<TicketDetailsDTO> findRoomTickets(UUID uuid) {
         return this.roomRepository.findByUuid(uuid).map(RoomDB::getTickets)
-                .map(tickets -> tickets.stream().map(this::toDTO).collect(Collectors.toList()))
+                .map(tickets -> tickets.stream().map(TicketDetailsDTO::new).collect(Collectors.toList()))
                 .orElse(Collections.emptyList());
     }
 
-    public TicketDTO createTicket(UUID roomUuid, UUID orderUuid, Seat seat) {
+    public TicketDetailsDTO createTicket(UUID roomUuid, UUID orderUuid, Seat seat) {
         RoomDB room = this.roomRepository.findByUuid(roomUuid)
                 .orElseThrow(() -> new InvalidTicketException(InvalidTicketException.Type.ROOM));
 
@@ -66,15 +63,11 @@ public class TicketService {
 
         TicketDB ticket = this.ticketRepository.save(new TicketDB(room, order, seat));
 
-        return this.toDTO(ticket);
+        return new TicketDetailsDTO(ticket);
     }
 
     @RestrictToStaff
     public void removeTicket(UUID uuid) {
         this.ticketRepository.deleteByUuid(uuid);
-    }
-
-    private TicketDTO toDTO(TicketDB ticket) {
-        return this.mapper.map(ticket, TicketDTO.class);
     }
 }

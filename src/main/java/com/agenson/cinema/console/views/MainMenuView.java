@@ -1,6 +1,7 @@
 package com.agenson.cinema.console.views;
 
 import com.agenson.cinema.console.template.AbstractStatelessView;
+import com.agenson.cinema.console.views.customer.catalog.MovieCatalogView;
 import com.agenson.cinema.console.views.identification.IdentificationView;
 import com.agenson.cinema.console.views.management.StaffMenuView;
 import com.agenson.cinema.security.SecurityService;
@@ -17,6 +18,8 @@ public class MainMenuView extends AbstractStatelessView {
     private final IdentificationView identificationView;
 
     private final StaffMenuView staffMenuView;
+
+    private final MovieCatalogView movieCatalogView;
 
     @Override
     protected String getTitle() {
@@ -51,7 +54,7 @@ public class MainMenuView extends AbstractStatelessView {
         switch (input) {
 
             case "1":
-                System.out.println("Going to movie catalog...");
+                this.movieCatalogView.handler();
                 break;
 
             case "2":

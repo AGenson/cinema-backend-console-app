@@ -8,7 +8,6 @@ import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,9 +33,6 @@ public class MovieIntegrationTests implements MovieConstants {
 
     @Autowired
     private BCryptPasswordEncoder encoder;
-
-    @Autowired
-    private ModelMapper mapper;
 
     @Autowired
     private SecurityService securityService;
@@ -73,7 +69,7 @@ public class MovieIntegrationTests implements MovieConstants {
     public void findMovie_ShouldReturnPersistedMovie_WhenGivenUuidOrTitle() {
         MovieDB movie = this.movieRepository.save(new MovieDB(NORMAL_TITLE));
 
-        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
+        MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.findMovie(movie.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -104,9 +100,7 @@ public class MovieIntegrationTests implements MovieConstants {
         this.movieRepository.saveAll(movieList);
 
         List<MovieDTO> actual = this.movieService.findMovies();
-        List<MovieDTO> expected = movieList.stream()
-                .map(movie -> this.mapper.map(movie, MovieDTO.class))
-                .collect(Collectors.toList());
+        List<MovieDTO> expected = movieList.stream().map(MovieDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -115,8 +109,7 @@ public class MovieIntegrationTests implements MovieConstants {
     @Test
     public void createMovie_ShouldReturnPersistedMovie_WhenGivenTitle() {
         MovieDTO expected = this.movieService.createMovie(NORMAL_TITLE);
-        Optional<MovieDTO> actual = this.movieRepository.findByUuid(expected.getUuid())
-                .map(movie -> this.mapper.map(movie, MovieDTO.class));
+        Optional<MovieDTO> actual = this.movieRepository.findByUuid(expected.getUuid()).map(MovieDTO::new);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -143,8 +136,7 @@ public class MovieIntegrationTests implements MovieConstants {
         UUID uuid = this.movieRepository.save(new MovieDB(NORMAL_TITLE)).getUuid();
 
         Optional<MovieDTO> expected = this.movieService.updateMovieTitle(uuid, ANOTHER_TITLE);
-        Optional<MovieDTO> actual = this.movieRepository.findByUuid(uuid)
-                .map(movie -> this.mapper.map(movie, MovieDTO.class));
+        Optional<MovieDTO> actual = this.movieRepository.findByUuid(uuid).map(MovieDTO::new);
 
         assertThat(actual).isEqualTo(expected);
     }

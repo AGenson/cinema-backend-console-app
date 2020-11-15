@@ -41,7 +41,7 @@ public class SignUpView extends AbstractStatelessView {
             this.userService.createUser(username, password);
             this.securityService.login(username, password);
         } catch (InvalidUserException ex) {
-            System.out.println(ex.getMessage());
+            System.out.println("\n" + ex.getMessage());
             this.askRetry();
         }
     }

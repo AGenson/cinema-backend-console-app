@@ -1,14 +1,11 @@
 package com.agenson.cinema.movie;
 
 import com.agenson.cinema.utils.CallableOneArgument;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.modelmapper.ModelMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -18,7 +15,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,23 +29,10 @@ class MovieServiceUnitTests implements MovieConstants {
             }};
 
     @Mock
-    private ModelMapper mapper;
-
-    @Mock
     private MovieRepository movieRepository;
 
     @InjectMocks
     private MovieService movieService;
-
-    @BeforeEach
-    public void setup() {
-        lenient().when(this.mapper.map(any(MovieDB.class), ArgumentMatchers.<Class<MovieDTO>>any()))
-                .thenAnswer(invocation -> {
-                    MovieDB movie = invocation.getArgument(0);
-
-                    return new MovieDTO(movie.getUuid(), movie.getTitle());
-                });
-    }
 
     @Test
     public void findMovie_ShouldReturnMovie_WhenGivenUuidOrTitle() {
@@ -58,7 +41,7 @@ class MovieServiceUnitTests implements MovieConstants {
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
         when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
 
-        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
+        MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.findMovie(movie.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -91,9 +74,7 @@ class MovieServiceUnitTests implements MovieConstants {
         when(this.movieRepository.findAll()).thenReturn(movieList);
 
         List<MovieDTO> actual = this.movieService.findMovies();
-        List<MovieDTO> expected = movieList.stream()
-                .map(movie -> this.mapper.map(movie, MovieDTO.class))
-                .collect(Collectors.toList());
+        List<MovieDTO> expected = movieList.stream().map(MovieDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -125,7 +106,7 @@ class MovieServiceUnitTests implements MovieConstants {
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
         when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
 
-        MovieDTO expected = this.mapper.map(movie, MovieDTO.class);
+        MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.updateMovieTitle(expected.getUuid(), NORMAL_TITLE.toLowerCase());
 
         assertThat(actual.isPresent()).isTrue();

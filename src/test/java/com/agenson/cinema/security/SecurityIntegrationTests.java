@@ -51,11 +51,7 @@ public class SecurityIntegrationTests implements UserConstants {
     @Test
     public void login_ShouldReturnUserDetails_WhenGivenCredentials() {
         UserDetailsDTO actual = this.securityService.login(NORMAL_USERNAME, NORMAL_PASSWORD);
-        UserDetailsDTO expected = new UserDetailsDTO(
-                this.defaultUser.getUuid(),
-                this.defaultUser.getUsername(),
-                this.defaultUser.getRole()
-        );
+        UserDetailsDTO expected = new UserDetailsDTO(this.defaultUser);
 
         assertThat(actual).isEqualTo(expected);
 

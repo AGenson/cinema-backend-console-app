@@ -5,7 +5,6 @@ import com.agenson.cinema.security.restriction.RestrictToUser;
 import com.agenson.cinema.user.UserDB;
 import com.agenson.cinema.user.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -22,21 +21,19 @@ public class OrderService {
 
     private final UserRepository userRepository;
 
-    private final ModelMapper mapper;
-
     public Optional<OrderDTO> findOrder(UUID uuid) {
-        return this.orderRepository.findByUuid(uuid).map(this::toDTO);
+        return this.orderRepository.findByUuid(uuid).map(OrderDTO::new);
     }
 
     @RestrictToStaff
     public List<OrderDTO> findOrders() {
-        return this.orderRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return this.orderRepository.findAll().stream().map(OrderDTO::new).collect(Collectors.toList());
     }
 
     @RestrictToUser(argName = "userUuid")
     public List<OrderDTO> findOrders(UUID userUuid) {
         return this.userRepository.findByUuid(userUuid).map(UserDB::getOrders)
-                .map(orders -> orders.stream().map(this::toDTO).collect(Collectors.toList()))
+                .map(orders -> orders.stream().map(OrderDTO::new).collect(Collectors.toList()))
                 .orElse(Collections.emptyList());
     }
 
@@ -45,16 +42,12 @@ public class OrderService {
         return this.userRepository.findByUuid(userUuid).map(user -> {
             OrderDB order = this.orderRepository.save(new OrderDB(user));
 
-            return this.toDTO(order);
+            return new OrderDTO(order);
         }).orElseThrow(() -> new InvalidOrderException(InvalidOrderException.Type.USER));
     }
 
     @RestrictToStaff
     public void removeOrder(UUID uuid) {
         this.orderRepository.deleteByUuid(uuid);
-    }
-
-    private OrderDTO toDTO(OrderDB order) {
-        return this.mapper.map(order, OrderDTO.class);
     }
 }

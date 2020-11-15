@@ -11,7 +11,6 @@ import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,9 +40,6 @@ public class RoomIntegrationTests implements RoomConstants {
 
     @Autowired
     private BCryptPasswordEncoder encoder;
-
-    @Autowired
-    private ModelMapper mapper;
 
     @Autowired
     private SecurityService securityService;
@@ -83,7 +79,7 @@ public class RoomIntegrationTests implements RoomConstants {
     public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuidOrRoomNumber() {
         RoomDB room = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS));
 
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
+        RoomDTO expected = new RoomDTO(room);
         Optional<RoomDTO> actual = this.roomService.findRoom(room.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -96,13 +92,13 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void findMovie_ShouldReturnNull_WhenNotFoundWithUuidOrRoomNumber() {
+    public void findRoom_ShouldReturnNull_WhenNotFoundWithUuidOrRoomNumber() {
         assertThat(this.roomRepository.findByUuid(UUID.randomUUID()).isPresent()).isFalse();
         assertThat(this.roomRepository.findByNumber(UNKNOWN_NUMBER).isPresent()).isFalse();
     }
 
     @Test
-    public void findMovies_ShouldReturnMovieList() {
+    public void findRooms_ShouldReturnMovieList() {
         List<RoomDB> roomList = Arrays.asList(
                 new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS),
                 new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS+10, NORMAL_COLS+20)
@@ -113,16 +109,14 @@ public class RoomIntegrationTests implements RoomConstants {
         this.roomRepository.saveAll(roomList);
 
         List<RoomDTO> actual = this.roomService.findRooms();
-        List<RoomDTO> expected = roomList.stream()
-                .map(room -> this.mapper.map(room, RoomDTO.class))
-                .collect(Collectors.toList());
+        List<RoomDTO> expected = roomList.stream().map(RoomDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
     }
 
     @Test
-    public void findMovies_ShouldReturnFilteredRoomList_WhenGivenMovieUuid() {
+    public void findRooms_ShouldReturnFilteredRoomList_WhenGivenMovieUuid() {
         RoomDB room1 = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
         RoomDB room2 = new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS+10, NORMAL_COLS+20);
         MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
@@ -132,7 +126,7 @@ public class RoomIntegrationTests implements RoomConstants {
         this.entityManager.refresh(movie);
 
         List<RoomDTO> actual = this.roomService.findRooms(movie.getUuid());
-        List<RoomDTO> expected = Collections.singletonList(this.mapper.map(room1, RoomDTO.class));
+        List<RoomDTO> expected = Collections.singletonList(new RoomDTO(room1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -141,8 +135,7 @@ public class RoomIntegrationTests implements RoomConstants {
     @Test
     public void createRoom_ShouldReturnPersistedRoom_WhenGivenRoomProperties() {
         RoomDTO expected = this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
-        Optional<RoomDTO> actual = this.roomRepository.findByUuid(expected.getUuid())
-                .map(room -> this.mapper.map(room, RoomDTO.class));
+        Optional<RoomDTO> actual = this.roomRepository.findByUuid(expected.getUuid()).map(RoomDTO::new);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -173,8 +166,7 @@ public class RoomIntegrationTests implements RoomConstants {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         Optional<RoomDTO> expected = this.roomService.updateRoomNumber(uuid, NORMAL_NUMBER+1);
-        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid)
-                .map(room -> this.mapper.map(room, RoomDTO.class));
+        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -202,8 +194,7 @@ public class RoomIntegrationTests implements RoomConstants {
         UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
 
         Optional<RoomDTO> expected = this.roomService.updateRoomCapacity(uuid, NORMAL_ROWS+10, NORMAL_COLS+20);
-        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid)
-                .map(room -> this.mapper.map(room, RoomDTO.class));
+        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -232,7 +223,7 @@ public class RoomIntegrationTests implements RoomConstants {
         MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
 
         room.setMovie(movie);
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
+        RoomDTO expected = new RoomDTO(room);
         Optional<RoomDTO> actual = this.roomService.updateRoomMovie(room.getUuid(), movie.getUuid());
 
         assertThat(actual.isPresent()).isTrue();

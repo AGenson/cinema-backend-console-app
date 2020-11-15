@@ -33,7 +33,7 @@ public class LogInView extends AbstractStatelessView {
         try {
             this.securityService.login(username, password);
         } catch (SecurityException ex) {
-            System.out.println(ex.getMessage());
+            System.out.println("\n" + ex.getMessage());
             this.askRetry();
         }
     }

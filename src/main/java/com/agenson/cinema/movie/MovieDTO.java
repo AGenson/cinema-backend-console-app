@@ -1,16 +1,24 @@
 package com.agenson.cinema.movie;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@EqualsAndHashCode
 public class MovieDTO {
 
-    private UUID uuid;
-    private String title;
+    private final UUID uuid;
+    private final String title;
+
+    public MovieDTO(MovieDB movie) {
+        this.uuid = movie.getUuid();
+        this.title = movie.getTitle();
+    }
+
+    @Override
+    public String toString() {
+        return this.title;
+    }
 }

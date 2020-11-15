@@ -35,7 +35,7 @@ public class ManageMoviesView extends AbstractListView<MovieDTO> {
         System.out.println("[1] - Add a movie\n");
 
         for (int i = 0; i < this.list.size(); i++)
-            System.out.println("[" + (i+OFFSET) + "] - " + this.list.get(i).getTitle());
+            System.out.println("[" + (i+OFFSET) + "] - " + this.list.get(i));
 
         System.out.println();
     }

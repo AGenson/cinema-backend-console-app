@@ -11,7 +11,6 @@ import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -36,9 +35,6 @@ public class TicketIntegrationTests {
     private BCryptPasswordEncoder encoder;
 
     @Autowired
-    private ModelMapper mapper;
-
-    @Autowired
     private SecurityService securityService;
 
     @Autowired
@@ -58,7 +54,7 @@ public class TicketIntegrationTests {
 
     @BeforeEach
     public void setup() {
-        String encodedPassword = new BCryptPasswordEncoder().encode("password");
+        String encodedPassword = this.encoder.encode("password");
         UserDB user = new UserDB("username", encodedPassword);
         RoomDB room = new RoomDB(99, 10, 20);
 
@@ -87,8 +83,8 @@ public class TicketIntegrationTests {
 
         this.ticketRepository.save(ticket);
 
-        TicketDTO expected = this.mapper.map(ticket, TicketDTO.class);
-        Optional<TicketDTO> actual = this.ticketService.findTicket(ticket.getUuid());
+        TicketDetailsDTO expected = new TicketDetailsDTO(ticket);
+        Optional<TicketDetailsDTO> actual = this.ticketService.findTicket(ticket.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -109,10 +105,8 @@ public class TicketIntegrationTests {
 
         this.ticketRepository.saveAll(ticketList);
 
-        List<TicketDTO> actual = this.ticketService.findTickets();
-        List<TicketDTO> expected = ticketList.stream()
-                .map(ticket -> this.mapper.map(ticket, TicketDTO.class))
-                .collect(Collectors.toList());
+        List<TicketDetailsDTO> actual = this.ticketService.findTickets();
+        List<TicketDetailsDTO> expected = ticketList.stream().map(TicketDetailsDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -143,8 +137,8 @@ public class TicketIntegrationTests {
         this.ticketRepository.saveAll(ticketList);
         this.entityManager.refresh(order1);
 
-        List<TicketDTO> actual = this.ticketService.findOrderTickets(order1.getUuid());
-        List<TicketDTO> expected = Collections.singletonList(this.mapper.map(ticket1, TicketDTO.class));
+        List<TicketDetailsDTO> actual = this.ticketService.findOrderTickets(order1.getUuid());
+        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -164,8 +158,8 @@ public class TicketIntegrationTests {
         this.ticketRepository.saveAll(ticketList);
         this.entityManager.refresh(room1);
 
-        List<TicketDTO> actual = this.ticketService.findRoomTickets(room1.getUuid());
-        List<TicketDTO> expected = Collections.singletonList(this.mapper.map(ticket1, TicketDTO.class));
+        List<TicketDetailsDTO> actual = this.ticketService.findRoomTickets(room1.getUuid());
+        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -182,13 +176,13 @@ public class TicketIntegrationTests {
 
     @Test
     public void createTicket_ShouldReturnPersistedTicket_WhenGivenRoomAndOrderUuidAndSeat() {
-        TicketDTO expected = this.ticketService.createTicket(
+        TicketDetailsDTO expected = this.ticketService.createTicket(
                 this.defaultRoom.getUuid(),
                 this.defaultOrder.getUuid(),
                 Seat.fromString("A01"));
 
-        Optional<TicketDTO> actual = this.ticketRepository.findByUuid(expected.getUuid())
-                .map(ticket -> this.mapper.map(ticket, TicketDTO.class));
+        Optional<TicketDetailsDTO> actual = this.ticketRepository.findByUuid(expected.getUuid())
+                .map(TicketDetailsDTO::new);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);

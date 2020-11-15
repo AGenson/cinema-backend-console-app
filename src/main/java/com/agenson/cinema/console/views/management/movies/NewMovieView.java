@@ -35,7 +35,7 @@ public class NewMovieView extends AbstractStatelessView {
                 this.movieService.createMovie(title);
                 this.setStayInView(false);
             } catch (InvalidMovieException ex) {
-                System.out.println(ex.getMessage());
+                System.out.println("\n" + ex.getMessage());
                 this.setProcessInput(true);
             }
         }

@@ -26,7 +26,7 @@ public class SecurityService {
     public UserDetailsDTO login(String username, String password) {
         return this.userRepository.findByUsername(username).map(user -> {
             if (password != null && encoder.matches(password, user.getPassword())) {
-                this.currentUser = new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole());
+                this.currentUser = new UserDetailsDTO(user);
 
                 return this.currentUser;
             }

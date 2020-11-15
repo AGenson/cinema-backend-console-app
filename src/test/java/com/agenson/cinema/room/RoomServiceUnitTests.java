@@ -5,14 +5,11 @@ import com.agenson.cinema.movie.MovieDTO;
 import com.agenson.cinema.movie.MovieRepository;
 import com.agenson.cinema.utils.CallableOneArgument;
 import com.agenson.cinema.utils.CallableTwoArguments;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,9 +40,6 @@ public class RoomServiceUnitTests implements RoomConstants {
             }};
 
     @Mock
-    private ModelMapper mapper;
-
-    @Mock
     private RoomRepository roomRepository;
 
     @Mock
@@ -55,23 +48,6 @@ public class RoomServiceUnitTests implements RoomConstants {
     @InjectMocks
     private RoomService roomService;
 
-    @BeforeEach
-    public void setup() {
-        lenient().when(this.mapper.map(any(RoomDB.class), ArgumentMatchers.<Class<RoomDTO>>any()))
-                .thenAnswer(invocation -> {
-                    RoomDB room = invocation.getArgument(0);
-
-                    return new RoomDTO(
-                            room.getUuid(),
-                            room.getNumber(),
-                            room.getNbRows(),
-                            room.getNbCols(),
-                            room.getMovie() != null
-                                    ? new MovieDTO(room.getMovie().getUuid(), room.getMovie().getTitle())
-                                    : null);
-                });
-    }
-
     @Test
     public void findRoom_ShouldReturnRoom_WhenGivenUuidOrRoomNumber() {
         RoomDB room = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
@@ -79,7 +55,7 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.roomRepository.findByUuid(room.getUuid())).thenReturn(Optional.of(room));
         when(this.roomRepository.findByNumber(room.getNumber())).thenReturn(Optional.of(room));
 
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
+        RoomDTO expected = new RoomDTO(room);
         Optional<RoomDTO> actual = this.roomService.findRoom(room.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -112,9 +88,7 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.roomRepository.findAll()).thenReturn(roomList);
 
         List<RoomDTO> actual = this.roomService.findRooms();
-        List<RoomDTO> expected = roomList.stream()
-                .map(room -> this.mapper.map(room, RoomDTO.class))
-                .collect(Collectors.toList());
+        List<RoomDTO> expected = roomList.stream().map(RoomDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -133,7 +107,7 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
 
         List<RoomDTO> actual = this.roomService.findRooms(movie.getUuid());
-        List<RoomDTO> expected = Collections.singletonList(this.mapper.map(room1, RoomDTO.class));
+        List<RoomDTO> expected = Collections.singletonList(new RoomDTO(room1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -172,13 +146,12 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.roomRepository.findByUuid(room.getUuid())).thenReturn(Optional.of(room));
         when(this.roomRepository.findByNumber(anyInt())).thenReturn(Optional.empty());
 
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
-        expected.setNumber(expected.getNumber()+1);
+        int expected = room.getNumber() + 1;
 
-        Optional<RoomDTO> actual = this.roomService.updateRoomNumber(room.getUuid(), expected.getNumber());
+        Optional<RoomDTO> actual = this.roomService.updateRoomNumber(room.getUuid(), expected);
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        assertThat(actual.get().getNumber()).isEqualTo(expected);
     }
 
     @Test
@@ -199,15 +172,15 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.roomRepository.save(any(RoomDB.class))).then(returnsFirstArg());
         when(this.roomRepository.findByUuid(room.getUuid())).thenReturn(Optional.of(room));
 
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
-        expected.setNbRows(expected.getNbRows()+10);
-        expected.setNbCols(expected.getNbCols()+20);
+        int expectedRows = room.getNbRows() + 10;
+        int expectedCols = room.getNbCols() + 20;
 
         Optional<RoomDTO> actual = this.roomService
-                .updateRoomCapacity(room.getUuid(), expected.getNbRows(), expected.getNbCols());
+                .updateRoomCapacity(room.getUuid(), expectedRows, expectedCols);
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        assertThat(actual.get().getNbRows()).isEqualTo(expectedRows);
+        assertThat(actual.get().getNbCols()).isEqualTo(expectedCols);
     }
 
     @Test
@@ -231,11 +204,10 @@ public class RoomServiceUnitTests implements RoomConstants {
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
 
         Optional<RoomDTO> actual = this.roomService.updateRoomMovie(room.getUuid(), movie.getUuid());
-        RoomDTO expected = this.mapper.map(room, RoomDTO.class);
-        expected.setMovie(new MovieDTO(movie.getUuid(), movie.getTitle()));
+        MovieDTO expected = new MovieDTO(movie);
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        assertThat(actual.get().getMovie()).isEqualTo(expected);
     }
 
     @Test

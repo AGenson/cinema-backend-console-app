@@ -1,37 +1,42 @@
-package com.agenson.cinema.console.views.management.movies;
+package com.agenson.cinema.console.views.management.rooms;
 
 import com.agenson.cinema.console.template.AbstractStateView;
 import com.agenson.cinema.movie.MovieDTO;
-import com.agenson.cinema.movie.MovieService;
+import com.agenson.cinema.room.RoomDTO;
+import com.agenson.cinema.room.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class ManageMovieView extends AbstractStateView<MovieDTO> {
+public class ManageRoomView extends AbstractStateView<RoomDTO> {
 
-    private final MovieService movieService;
+    private final RoomService roomService;
 
-    private final EditMovieTitleView editMovieTitleView;
+    private final EditRoomMovieView editRoomMovieView;
 
     @Override
     protected void refreshState() {
-        this.state = this.movieService.findMovie(this.state.getUuid()).orElse(this.state);
+        this.state = this.roomService.findRoom(this.state.getUuid()).orElse(this.state);
     }
 
     @Override
     protected String getTitle() {
-        return "Manage Movie";
+        return "Manage Room";
     }
 
     @Override
     protected void printContent() {
-        System.out.println("Title: " + this.state + "\n");
+        MovieDTO movie = this.state.getMovie();
+
+        System.out.println("Room: " + this.state.getNumber());
+        System.out.println("Capacity: " + this.state.getCapacity());
+        System.out.println("Movie: " + (movie != null ? movie : "-") + "\n");
 
         System.out.println("Please select an action:");
         System.out.println("[0] - Go back");
         System.out.println("[1] - Edit Movie");
-        System.out.println("[2] - Remove Movie\n");
+        System.out.println("[2] - Remove Room\n");
     }
 
     @Override
@@ -47,12 +52,12 @@ public class ManageMovieView extends AbstractStateView<MovieDTO> {
                 break;
 
             case "1":
-                this.editMovieTitleView.handler(this.state);
+                this.editRoomMovieView.handler(this.state);
                 this.refreshState();
                 break;
 
             case "2":
-                this.movieService.removeMovie(this.state.getUuid());
+                this.roomService.removeRoom(this.state.getUuid());
                 this.setStayInView(false);
                 break;
 

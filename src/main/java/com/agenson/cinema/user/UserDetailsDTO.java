@@ -1,22 +1,25 @@
 package com.agenson.cinema.user;
 
 import com.agenson.cinema.security.SecurityRole;
-import lombok.Value;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
-import java.util.UUID;
+@Getter
+@EqualsAndHashCode(callSuper = true)
+public class UserDetailsDTO extends UserBasicDTO {
 
-@Value
-public class UserDetailsDTO {
+    private final SecurityRole role;
 
-    UUID uuid;
-    String username;
-    SecurityRole role;
+    public UserDetailsDTO(UserDB user) {
+        super(user);
+        this.role = user.getRole();
+    }
 
     @Override
     public String toString() {
         if (SecurityRole.STAFF.equals(this.role))
-            return this.username + " (STAFF)";
+            return this.getUsername() + " (STAFF)";
         else
-            return this.username;
+            return this.getUsername();
     }
 }

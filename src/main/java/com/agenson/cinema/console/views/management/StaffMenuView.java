@@ -2,6 +2,7 @@ package com.agenson.cinema.console.views.management;
 
 import com.agenson.cinema.console.template.AbstractStatelessView;
 import com.agenson.cinema.console.views.management.movies.ManageMoviesView;
+import com.agenson.cinema.console.views.management.rooms.ManageRoomsView;
 import com.agenson.cinema.console.views.management.users.ManageUsersView;
 import com.agenson.cinema.security.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ public class StaffMenuView extends AbstractStatelessView {
     private final SecurityService securityService;
 
     private final ManageMoviesView manageMoviesView;
+
+    private final ManageRoomsView manageRoomsView;
 
     private final ManageUsersView manageUsersView;
 
@@ -50,7 +53,7 @@ public class StaffMenuView extends AbstractStatelessView {
                 break;
 
             case "2":
-                System.out.println("Going to manage rooms...");
+                this.manageRoomsView.handler();
                 break;
 
             case "3":

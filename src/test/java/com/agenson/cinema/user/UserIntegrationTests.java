@@ -8,7 +8,6 @@ import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,9 +33,6 @@ public class UserIntegrationTests implements UserConstants {
 
     @Autowired
     private BCryptPasswordEncoder encoder;
-
-    @Autowired
-    private ModelMapper mapper;
 
     @Autowired
     private SecurityService securityService;
@@ -65,25 +61,15 @@ public class UserIntegrationTests implements UserConstants {
     }
 
     @Test
-    public void findUser_ShouldReturnPersistedUser_WhenGivenUuidOrUsername() {
+    public void findUser_ShouldReturnPersistedUser_WhenGivenUuid() {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
+        this.loginAs(user);
 
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        Optional<UserDTO> actual = this.userService.findUser(user.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-
-        actual = this.userService.findUser(user.getUsername());
+        UserCompleteDTO expected = new UserCompleteDTO(user);
+        Optional<UserCompleteDTO> actual = this.userService.findUser(user.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void findUser_ShouldReturnNull_WhenNotFoundWithUuidOrUsername() {
-        assertThat(this.userService.findUser(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.userService.findUser(ANOTHER_USERNAME).isPresent()).isFalse();
     }
 
     @Test
@@ -99,9 +85,7 @@ public class UserIntegrationTests implements UserConstants {
         this.userRepository.saveAll(userList);
 
         List<UserDetailsDTO> actual = this.userService.findUsers();
-        List<UserDetailsDTO> expected = userList.stream()
-                .map(user -> new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole()))
-                .collect(Collectors.toList());
+        List<UserDetailsDTO> expected = userList.stream().map(UserDetailsDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -118,10 +102,10 @@ public class UserIntegrationTests implements UserConstants {
 
     @Test
     public void createUser_ShouldReturnPersistedUser_WhenGivenCredentials() {
-        UserDTO expected = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserBasicDTO expected = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
 
         Optional<UserDB> actualDB = this.userRepository.findByUuid(expected.getUuid());
-        Optional<UserDTO> actualDTO = actualDB.map(user -> this.mapper.map(user, UserDTO.class));
+        Optional<UserBasicDTO> actualDTO = actualDB.map(UserBasicDTO::new);
 
         assertThat(actualDTO.isPresent()).isTrue();
         assertThat(actualDTO.get()).isEqualTo(expected);
@@ -146,9 +130,8 @@ public class UserIntegrationTests implements UserConstants {
         UserDB user = this.userRepository.save(this.newUserInstance(NORMAL_USERNAME));
         this.loginAs(user);
 
-        Optional<UserDTO> expected = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
-        Optional<UserDTO> actual = this.userRepository.findByUuid(user.getUuid())
-                .map(userDB -> this.mapper.map(userDB, UserDTO.class));
+        Optional<UserBasicDTO> expected = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
+        Optional<UserBasicDTO> actual = this.userRepository.findByUuid(user.getUuid()).map(UserBasicDTO::new);
 
         assertThat(actual).isEqualTo(expected);
     }

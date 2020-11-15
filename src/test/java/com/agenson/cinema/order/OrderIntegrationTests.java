@@ -7,7 +7,6 @@ import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,9 +26,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class OrderIntegrationTests {
-
-    @Autowired
-    private ModelMapper mapper;
 
     @Autowired
     private SecurityService securityService;
@@ -71,7 +67,7 @@ public class OrderIntegrationTests {
     public void findOrder_ShouldReturnPersistedRoom_WhenGivenUuid() {
         OrderDB order = this.orderRepository.save(new OrderDB(this.defaultUser));
 
-        OrderDTO expected = this.mapper.map(order, OrderDTO.class);
+        OrderDTO expected = new OrderDTO(order);
         Optional<OrderDTO> actual = this.orderService.findOrder(order.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -95,9 +91,7 @@ public class OrderIntegrationTests {
         this.orderRepository.saveAll(orderList);
 
         List<OrderDTO> actual = this.orderService.findOrders();
-        List<OrderDTO> expected = orderList.stream()
-                .map(order -> this.mapper.map(order, OrderDTO.class))
-                .collect(Collectors.toList());
+        List<OrderDTO> expected = orderList.stream().map(OrderDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -121,7 +115,7 @@ public class OrderIntegrationTests {
         this.entityManager.refresh(this.defaultUser);
 
         List<OrderDTO> actual = this.orderService.findOrders(this.defaultUser.getUuid());
-        List<OrderDTO> expected = Collections.singletonList(this.mapper.map(order1, OrderDTO.class));
+        List<OrderDTO> expected = Collections.singletonList(new OrderDTO(order1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -139,8 +133,7 @@ public class OrderIntegrationTests {
     @Test
     public void createOrder_ShouldReturnPersistedOrder_WhenGivenUserUuid() {
         OrderDTO expected = this.orderService.createOrder(this.defaultUser.getUuid());
-        Optional<OrderDTO> actual = this.orderRepository.findByUuid(expected.getUuid())
-                .map(order -> this.mapper.map(order, OrderDTO.class));
+        Optional<OrderDTO> actual = this.orderRepository.findByUuid(expected.getUuid()).map(OrderDTO::new);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);

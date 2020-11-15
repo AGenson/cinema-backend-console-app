@@ -13,7 +13,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
@@ -38,9 +37,6 @@ public class TicketServiceUnitTests {
             }};
 
     @Mock
-    private ModelMapper mapper;
-
-    @Mock
     private TicketRepository ticketRepository;
 
     @Mock
@@ -60,13 +56,6 @@ public class TicketServiceUnitTests {
 
     @BeforeEach
     public void setup() {
-        lenient().when(this.mapper.map(any(TicketDB.class), ArgumentMatchers.<Class<TicketDTO>>any()))
-                .thenAnswer(invocation -> {
-                    TicketDB ticket = invocation.getArgument(0);
-
-                    return new ModelMapper().map(ticket, TicketDTO.class);
-                });
-
         this.defaultUser = new UserDB("username", new BCryptPasswordEncoder().encode("password"));
         this.defaultRoom = new RoomDB(99, 10, 20);
         this.defaultOrder = new OrderDB(this.defaultUser);
@@ -78,8 +67,8 @@ public class TicketServiceUnitTests {
 
         when(this.ticketRepository.findByUuid(ticket.getUuid())).thenReturn(Optional.of(ticket));
 
-        TicketDTO expected = this.mapper.map(ticket, TicketDTO.class);
-        Optional<TicketDTO> actual = this.ticketService.findTicket(ticket.getUuid());
+        TicketDetailsDTO expected = new TicketDetailsDTO(ticket);
+        Optional<TicketDetailsDTO> actual = this.ticketService.findTicket(ticket.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -101,10 +90,8 @@ public class TicketServiceUnitTests {
 
         when(this.ticketRepository.findAll()).thenReturn(ticketList);
 
-        List<TicketDTO> actual = this.ticketService.findTickets();
-        List<TicketDTO> expected = ticketList.stream()
-                .map(ticket -> this.mapper.map(ticket, TicketDTO.class))
-                .collect(Collectors.toList());
+        List<TicketDetailsDTO> actual = this.ticketService.findTickets();
+        List<TicketDetailsDTO> expected = ticketList.stream().map(TicketDetailsDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -125,8 +112,8 @@ public class TicketServiceUnitTests {
 
         when(this.orderRepository.findByUuid(order1.getUuid())).thenReturn(Optional.of(order1));
 
-        List<TicketDTO> actual = this.ticketService.findOrderTickets(order1.getUuid());
-        List<TicketDTO> expected = Collections.singletonList(this.mapper.map(ticket1, TicketDTO.class));
+        List<TicketDetailsDTO> actual = this.ticketService.findOrderTickets(order1.getUuid());
+        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -147,8 +134,8 @@ public class TicketServiceUnitTests {
 
         when(this.roomRepository.findByUuid(room1.getUuid())).thenReturn(Optional.of(room1));
 
-        List<TicketDTO> actual = this.ticketService.findRoomTickets(room1.getUuid());
-        List<TicketDTO> expected = Collections.singletonList(this.mapper.map(ticket1, TicketDTO.class));
+        List<TicketDetailsDTO> actual = this.ticketService.findRoomTickets(room1.getUuid());
+        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -162,7 +149,7 @@ public class TicketServiceUnitTests {
         when(this.roomRepository.findByUuid(this.defaultRoom.getUuid())).thenReturn(Optional.of(this.defaultRoom));
         when(this.orderRepository.findByUuid(this.defaultOrder.getUuid())).thenReturn(Optional.of(this.defaultOrder));
 
-        TicketDTO actual = this.ticketService.createTicket(
+        TicketDetailsDTO actual = this.ticketService.createTicket(
                 this.defaultRoom.getUuid(),
                 this.defaultOrder.getUuid(),
                 seat
@@ -171,7 +158,6 @@ public class TicketServiceUnitTests {
         assertThat(actual.getUuid()).isNotNull();
         assertThat(actual.getSeat()).isEqualTo(seat);
         assertThat(actual.getRoom().getUuid()).isEqualTo(this.defaultRoom.getUuid());
-        assertThat(actual.getOrder().getUuid()).isEqualTo(this.defaultOrder.getUuid());
     }
 
     @Test

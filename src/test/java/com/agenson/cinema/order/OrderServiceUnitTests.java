@@ -1,7 +1,7 @@
 package com.agenson.cinema.order;
 
 import com.agenson.cinema.user.UserDB;
-import com.agenson.cinema.user.UserDTO;
+import com.agenson.cinema.user.UserBasicDTO;
 import com.agenson.cinema.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,7 +10,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
@@ -31,9 +30,6 @@ public class OrderServiceUnitTests {
     private static final UserDB DEFAULT_USER = new UserDB("username", ENCODED_PASSWORD);
 
     @Mock
-    private ModelMapper mapper;
-
-    @Mock
     private OrderRepository orderRepository;
 
     @Mock
@@ -42,24 +38,13 @@ public class OrderServiceUnitTests {
     @InjectMocks
     private OrderService orderService;
 
-    @BeforeEach
-    public void setup() {
-        lenient().when(this.mapper.map(any(OrderDB.class), ArgumentMatchers.<Class<OrderDTO>>any()))
-                .thenAnswer(invocation -> {
-                    OrderDB order = invocation.getArgument(0);
-                    UserDB user = order.getUser();
-
-                    return new OrderDTO(order.getUuid(), new UserDTO(user.getUuid(), user.getUsername()));
-                });
-    }
-
     @Test
     public void findOrder_ShouldReturnOrder_WhenGivenUuid() {
         OrderDB order = new OrderDB(DEFAULT_USER);
 
         when(this.orderRepository.findByUuid(order.getUuid())).thenReturn(Optional.of(order));
 
-        OrderDTO expected = this.mapper.map(order, OrderDTO.class);
+        OrderDTO expected = new OrderDTO(order);
         Optional<OrderDTO> actual = this.orderService.findOrder(order.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
@@ -83,9 +68,7 @@ public class OrderServiceUnitTests {
         when(this.orderRepository.findAll()).thenReturn(orderList);
 
         List<OrderDTO> actual = this.orderService.findOrders();
-        List<OrderDTO> expected = orderList.stream()
-                .map(order -> this.mapper.map(order, OrderDTO.class))
-                .collect(Collectors.toList());
+        List<OrderDTO> expected = orderList.stream().map(OrderDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -104,7 +87,7 @@ public class OrderServiceUnitTests {
         when(this.userRepository.findByUuid(user1.getUuid())).thenReturn(Optional.of(user1));
 
         List<OrderDTO> actual = this.orderService.findOrders(user1.getUuid());
-        List<OrderDTO> expected = Collections.singletonList(this.mapper.map(order1, OrderDTO.class));
+        List<OrderDTO> expected = Collections.singletonList(new OrderDTO(order1));
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -118,7 +101,6 @@ public class OrderServiceUnitTests {
         OrderDTO actual = this.orderService.createOrder(DEFAULT_USER.getUuid());
 
         assertThat(actual.getUuid()).isNotNull();
-        assertThat(actual.getUser()).isEqualTo(new UserDTO(DEFAULT_USER.getUuid(), DEFAULT_USER.getUsername()));
     }
 
     @Test

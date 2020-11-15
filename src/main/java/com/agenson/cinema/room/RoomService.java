@@ -3,9 +3,10 @@ package com.agenson.cinema.room;
 import com.agenson.cinema.movie.MovieDB;
 import com.agenson.cinema.movie.MovieRepository;
 import com.agenson.cinema.security.restriction.RestrictToStaff;
+import com.agenson.cinema.ticket.TicketRepository;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,23 +22,23 @@ public class RoomService {
 
     private final MovieRepository movieRepository;
 
-    private final ModelMapper mapper;
+    private final TicketRepository ticketRepository;
 
     public Optional<RoomDTO> findRoom(UUID uuid) {
-        return this.roomRepository.findByUuid(uuid).map(this::toDTO);
+        return this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
     }
 
     public Optional<RoomDTO> findRoom(int number) {
-        return this.roomRepository.findByNumber(number).map(this::toDTO);
+        return this.roomRepository.findByNumber(number).map(RoomDTO::new);
     }
 
     public List<RoomDTO> findRooms() {
-        return this.roomRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return this.roomRepository.findAll().stream().map(RoomDTO::new).collect(Collectors.toList());
     }
 
     public List<RoomDTO> findRooms(UUID movieUuid) {
         return this.movieRepository.findByUuid(movieUuid).map(MovieDB::getRooms)
-                .map(rooms -> rooms.stream().map(this::toDTO).collect(Collectors.toList()))
+                .map(rooms -> rooms.stream().map(RoomDTO::new).collect(Collectors.toList()))
                 .orElse(Collections.emptyList());
     }
 
@@ -46,7 +47,7 @@ public class RoomService {
         this.validateNumber(null, number);
         this.validateCapacity(nbRows, nbCols);
 
-        return this.toDTO(this.roomRepository.save(new RoomDB(number, nbRows, nbCols)));
+        return new RoomDTO(this.roomRepository.save(new RoomDB(number, nbRows, nbCols)));
     }
 
     @RestrictToStaff
@@ -55,7 +56,7 @@ public class RoomService {
             this.validateNumber(movie.getUuid(), number);
             movie.setNumber(number);
 
-            return this.toDTO(this.roomRepository.save(movie));
+            return new RoomDTO(this.roomRepository.save(movie));
         });
     }
 
@@ -66,19 +67,21 @@ public class RoomService {
             movie.setNbRows(nbRows);
             movie.setNbCols(nbCols);
 
-            return this.toDTO(this.roomRepository.save(movie));
+            return new RoomDTO(this.roomRepository.save(movie));
         });
     }
 
     @RestrictToStaff
+    @Transactional
     public Optional<RoomDTO> updateRoomMovie(UUID uuid, UUID movieUuid) {
         return this.roomRepository.findByUuid(uuid).map(room -> {
             Optional<MovieDB> movie = this.movieRepository.findByUuid(movieUuid);
 
             if (movie.isPresent()) {
                 room.setMovie(movie.get());
+                room.getTickets().forEach(ticket -> this.ticketRepository.deleteByUuid(ticket.getUuid()));
 
-                return this.toDTO(this.roomRepository.save(room));
+                return new RoomDTO(this.roomRepository.save(room));
             } else throw new InvalidRoomException(InvalidRoomException.Type.MOVIE);
         });
     }
@@ -86,10 +89,6 @@ public class RoomService {
     @RestrictToStaff
     public void removeRoom(UUID uuid) {
         this.roomRepository.deleteByUuid(uuid);
-    }
-
-    private RoomDTO toDTO(RoomDB room) {
-        return this.mapper.map(room, RoomDTO.class);
     }
 
     private void validateNumber(UUID uuid, int number) {

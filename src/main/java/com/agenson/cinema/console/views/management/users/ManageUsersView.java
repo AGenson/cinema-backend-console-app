@@ -25,7 +25,6 @@ public class ManageUsersView extends AbstractListView<UserDetailsDTO> {
             this.list = this.userService.findUsers();
             this.list.removeIf(user -> currentUser.getUuid().equals(user.getUuid()));
         });
-
     }
 
     @Override

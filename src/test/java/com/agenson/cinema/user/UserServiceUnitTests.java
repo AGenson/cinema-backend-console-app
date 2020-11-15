@@ -2,14 +2,11 @@ package com.agenson.cinema.user;
 
 import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.utils.CallableOneArgument;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
@@ -20,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,53 +43,30 @@ public class UserServiceUnitTests implements UserConstants {
     private BCryptPasswordEncoder encoder;
 
     @Mock
-    private ModelMapper mapper;
-
-    @Mock
     private UserRepository userRepository;
 
     @InjectMocks
     private UserService userService;
 
-    @BeforeEach
-    public void setup() {
-        lenient().when(this.mapper.map(any(UserDB.class), ArgumentMatchers.<Class<UserDTO>>any()))
-                .thenAnswer(invocation -> {
-                    UserDB user = invocation.getArgument(0);
-
-                    return new UserDTO(user.getUuid(), user.getUsername());
-                });
-    }
-
     @Test
-    public void findUser_ShouldReturnUser_WhenGivenUuidOrUsername() {
+    public void findUser_ShouldReturnUser_WhenGivenUuid() {
         UserDB user = this.newUserInstance(NORMAL_USERNAME);
 
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
-        when(this.userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
 
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        Optional<UserDTO> actual = this.userService.findUser(user.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-
-        actual = this.userService.findUser(user.getUsername());
+        UserCompleteDTO expected = new UserCompleteDTO(user);
+        Optional<UserCompleteDTO> actual = this.userService.findUser(user.getUuid());
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void findUser_ShouldReturnNull_WhenGivenUnknownUuidOrUsername() {
+    public void findUser_ShouldReturnNull_WhenGivenUnknownUuid() {
         when(this.userRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
-        when(this.userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
 
         assertThat(this.userService.findUser(UUID.randomUUID()).isPresent()).isFalse();
         assertThat(this.userService.findUser((UUID) null).isPresent()).isFalse();
-
-        assertThat(this.userService.findUser(UNKNOWN_USERNAME).isPresent()).isFalse();
-        assertThat(this.userService.findUser((String) null).isPresent()).isFalse();
     }
 
     @Test
@@ -106,9 +79,7 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.findAll()).thenReturn(userList);
 
         List<UserDetailsDTO> actual = this.userService.findUsers();
-        List<UserDetailsDTO> expected = userList.stream()
-                .map(user -> new UserDetailsDTO(user.getUuid(), user.getUsername(), user.getRole()))
-                .collect(Collectors.toList());
+        List<UserDetailsDTO> expected = userList.stream().map(UserDetailsDTO::new).collect(Collectors.toList());
 
         assertThat(actual.size()).isEqualTo(expected.size());
         assertThat(actual).containsOnlyOnceElementsOf(expected);
@@ -120,7 +91,7 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.encoder.encode(NORMAL_PASSWORD)).thenReturn(ENCODER.encode(NORMAL_PASSWORD));
 
-        UserDTO actual = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
+        UserBasicDTO actual = this.userService.createUser(NORMAL_USERNAME, NORMAL_PASSWORD);
 
         assertThat(actual.getUuid()).isNotNull();
         assertThat(actual.getUsername()).isEqualTo(NORMAL_USERNAME);
@@ -146,13 +117,10 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
         when(this.userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
 
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        expected.setUsername(ANOTHER_USERNAME);
-
-        Optional<UserDTO> actual = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
+        Optional<UserBasicDTO> actual = this.userService.updateUserUsername(user.getUuid(), ANOTHER_USERNAME);
 
         assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
+        assertThat(actual.get().getUsername()).isEqualTo(ANOTHER_USERNAME);
     }
 
     @Test
@@ -174,8 +142,8 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
         when(this.encoder.encode(ANOTHER_PASSWORD)).thenReturn(ENCODER.encode(ANOTHER_PASSWORD));
 
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        Optional<UserDTO> actual = this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
+        UserBasicDTO expected = new UserBasicDTO(user);
+        Optional<UserBasicDTO> actual = this.userService.updateUserPassword(user.getUuid(), ANOTHER_PASSWORD);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
@@ -199,8 +167,8 @@ public class UserServiceUnitTests implements UserConstants {
         when(this.userRepository.save(any(UserDB.class))).then(returnsFirstArg());
         when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
 
-        UserDTO expected = this.mapper.map(user, UserDTO.class);
-        Optional<UserDTO> actual = this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
+        UserBasicDTO expected = new UserBasicDTO(user);
+        Optional<UserBasicDTO> actual = this.userService.updateUserRole(user.getUuid(), SecurityRole.STAFF);
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);

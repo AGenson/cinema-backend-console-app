@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class EditMovieView extends AbstractStateView<MovieDTO> {
+public class EditMovieTitleView extends AbstractStateView<MovieDTO> {
 
     private final MovieService movieService;
 
@@ -20,7 +20,7 @@ public class EditMovieView extends AbstractStateView<MovieDTO> {
 
     @Override
     protected String getTitle() {
-        return "Edit Movie";
+        return "Edit Movie Title";
     }
 
     @Override
@@ -41,7 +41,7 @@ public class EditMovieView extends AbstractStateView<MovieDTO> {
                 this.movieService.updateMovieTitle(this.state.getUuid(), title);
                 this.setStayInView(false);
             } catch (InvalidMovieException ex) {
-                System.out.println(ex.getMessage());
+                System.out.println("\n" + ex.getMessage());
                 this.setProcessInput(true);
             }
         }

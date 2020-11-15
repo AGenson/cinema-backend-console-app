@@ -2,7 +2,6 @@ package com.agenson.cinema.movie;
 
 import com.agenson.cinema.security.restriction.RestrictToStaff;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,25 +15,23 @@ public class MovieService {
 
     private final MovieRepository movieRepository;
 
-    private final ModelMapper mapper;
-
     public Optional<MovieDTO> findMovie(UUID uuid) {
-        return this.movieRepository.findByUuid(uuid).map(this::toDTO);
+        return this.movieRepository.findByUuid(uuid).map(MovieDTO::new);
     }
 
     public Optional<MovieDTO> findMovie(String title) {
-        return this.movieRepository.findByTitle(this.formatTitle(title)).map(this::toDTO);
+        return this.movieRepository.findByTitle(this.formatTitle(title)).map(MovieDTO::new);
     }
 
     public List<MovieDTO> findMovies() {
-        return this.movieRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return this.movieRepository.findAll().stream().map(MovieDTO::new).collect(Collectors.toList());
     }
 
     @RestrictToStaff
     public MovieDTO createMovie(String title) {
         this.validateTitle(null, title);
 
-        return this.toDTO(this.movieRepository.save(new MovieDB(this.formatTitle(title))));
+        return new MovieDTO(this.movieRepository.save(new MovieDB(this.formatTitle(title))));
     }
 
     @RestrictToStaff
@@ -43,17 +40,13 @@ public class MovieService {
             this.validateTitle(uuid, title);
             movie.setTitle(this.formatTitle(title));
 
-            return this.toDTO(this.movieRepository.save(movie));
+            return new MovieDTO(this.movieRepository.save(movie));
         });
     }
 
     @RestrictToStaff
     public void removeMovie(UUID uuid) {
         this.movieRepository.deleteByUuid(uuid);
-    }
-
-    private MovieDTO toDTO(MovieDB movie) {
-        return this.mapper.map(movie, MovieDTO.class);
     }
 
     private void validateTitle(UUID uuid, String title) {
