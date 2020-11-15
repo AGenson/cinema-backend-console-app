@@ -32,18 +32,8 @@ public class RoomService {
         return this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
     }
 
-    public Optional<RoomDTO> findRoom(int number) {
-        return this.roomRepository.findByNumber(number).map(RoomDTO::new);
-    }
-
     public List<RoomDTO> findRooms() {
         return this.roomRepository.findAll().stream().map(RoomDTO::new).collect(Collectors.toList());
-    }
-
-    public List<RoomDTO> findRooms(UUID movieUuid) {
-        return this.movieRepository.findByUuid(movieUuid).map(MovieDB::getRooms)
-                .map(rooms -> rooms.stream().map(RoomDTO::new).collect(Collectors.toList()))
-                .orElse(Collections.emptyList());
     }
 
     @RestrictToStaff
@@ -54,29 +44,8 @@ public class RoomService {
         return new RoomDTO(this.roomRepository.save(new RoomDB(number, nbRows, nbCols)));
     }
 
-    @RestrictToStaff
-    public Optional<RoomDTO> updateRoomNumber(UUID uuid, int number) {
-        return this.roomRepository.findByUuid(uuid).map(movie -> {
-            this.validateNumber(movie.getUuid(), number);
-            movie.setNumber(number);
-
-            return new RoomDTO(this.roomRepository.save(movie));
-        });
-    }
-
-    @RestrictToStaff
-    public Optional<RoomDTO> updateRoomCapacity(UUID uuid, int nbRows, int nbCols) {
-        return this.roomRepository.findByUuid(uuid).map(movie -> {
-            this.validateCapacity(nbRows, nbCols);
-            movie.setNbRows(nbRows);
-            movie.setNbCols(nbCols);
-
-            return new RoomDTO(this.roomRepository.save(movie));
-        });
-    }
-
-    @RestrictToStaff
     @Transactional
+    @RestrictToStaff
     public Optional<RoomDTO> updateRoomMovie(UUID uuid, UUID movieUuid) {
         return this.roomRepository.findByUuid(uuid).map(room -> {
             Optional<MovieDB> movie = this.movieRepository.findByUuid(movieUuid);

@@ -12,7 +12,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,26 +38,11 @@ public class TicketRepositoryUnitTests {
     }
 
     @Test
-    public void findByUuid_ShouldReturnTicket_WhenGivenPersistedUuid() {
-        Optional<TicketDB> actual = this.ticketRepository.findByUuid(this.expected.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(this.expected);
-    }
-
-    @Test
-    public void findByUuid_ShouldReturnNull_WhenGivenUnknownUuid() {
-        Optional<TicketDB> actual = this.ticketRepository.findByUuid(UUID.randomUUID());
-
-        assertThat(actual.isPresent()).isFalse();
-    }
-
-    @Test
     public void deleteByUuid_ShouldDeleteTicket_WhenGivenUuid() {
         this.ticketRepository.deleteByUuid(this.expected.getUuid());
 
         Optional<TicketDB> actual = this.ticketRepository.findById(this.expected.getId());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 }

@@ -37,7 +37,7 @@ public class RoomRepositoryUnitTests implements RoomConstants {
     public void findByUuid_ShouldReturnRoom_WhenGivenPersistedUuid() {
         Optional<RoomDB> actual = this.roomRepository.findByUuid(this.expected.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -45,14 +45,14 @@ public class RoomRepositoryUnitTests implements RoomConstants {
     public void findByUuid_ShouldReturnNull_WhenGivenUnknownUuid() {
         Optional<RoomDB> actual = this.roomRepository.findByUuid(UUID.randomUUID());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
     public void findByNumber_ShouldReturnRoom_WhenGivenPersistedRoomNumber() {
         Optional<RoomDB> actual = this.roomRepository.findByNumber(this.expected.getNumber());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -60,7 +60,7 @@ public class RoomRepositoryUnitTests implements RoomConstants {
     public void findByNumber_ShouldReturnNull_WhenGivenUnknownRoomNumber() {
         Optional<RoomDB> actual = this.roomRepository.findByNumber(UNKNOWN_NUMBER);
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
@@ -69,7 +69,7 @@ public class RoomRepositoryUnitTests implements RoomConstants {
 
         Optional<RoomDB> actual = this.roomRepository.findById(this.expected.getId());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test

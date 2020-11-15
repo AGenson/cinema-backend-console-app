@@ -5,7 +5,7 @@ import com.agenson.cinema.order.OrderDTO;
 import com.agenson.cinema.room.RoomDTO;
 import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.security.SecurityService;
-import com.agenson.cinema.ticket.TicketSeatDTO;
+import com.agenson.cinema.ticket.TicketDetailsDTO;
 import com.agenson.cinema.ticket.seat.Seat;
 import com.agenson.cinema.user.UserCompleteDTO;
 import com.agenson.cinema.user.UserDetailsDTO;
@@ -47,7 +47,7 @@ public class ProfileView extends AbstractStatelessView {
                     for (OrderDTO order : user.get().getOrders()) {
                         if (order.getTickets().size() != 0) {
                             RoomDTO room = order.getTickets().get(0).getRoom();
-                            List<Seat> seats = order.getTickets().stream().map(TicketSeatDTO::getSeat)
+                            List<Seat> seats = order.getTickets().stream().map(TicketDetailsDTO::getSeat)
                                     .collect(Collectors.toList());
 
                             System.out.println("\n> Room: " + room.getNumber());

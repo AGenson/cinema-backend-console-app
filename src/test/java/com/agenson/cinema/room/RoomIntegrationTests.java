@@ -5,8 +5,6 @@ import com.agenson.cinema.movie.MovieRepository;
 import com.agenson.cinema.security.SecurityService;
 import com.agenson.cinema.security.SecurityRole;
 import com.agenson.cinema.user.UserDB;
-import com.agenson.cinema.utils.CallableOneArgument;
-import com.agenson.cinema.utils.CallableTwoArguments;
 import com.agenson.cinema.utils.StaffSecurityAssertion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,12 +58,10 @@ public class RoomIntegrationTests implements RoomConstants {
 
     @BeforeEach
     public void setup() {
-        if (this.defaultUser == null) {
-            UserDB user = new UserDB("username", this.encoder.encode("password"));
+        UserDB user = new UserDB("username", this.encoder.encode("password"));
 
-            this.entityManager.persist(user);
-            this.defaultUser = user;
-        }
+        this.entityManager.persist(user);
+        this.defaultUser = user;
 
         this.loginAs(SecurityRole.STAFF);
     }
@@ -76,7 +72,7 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuidOrRoomNumber() {
+    public void findRoom_ShouldRReturnPersistedRoom_WhenGivenUuid() {
         RoomDB room = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS));
 
         RoomDTO expected = new RoomDTO(room);
@@ -84,17 +80,11 @@ public class RoomIntegrationTests implements RoomConstants {
 
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(expected);
-
-        actual = this.roomService.findRoom(room.getNumber());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
     public void findRoom_ShouldReturnNull_WhenNotFoundWithUuidOrRoomNumber() {
-        assertThat(this.roomRepository.findByUuid(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.roomRepository.findByNumber(UNKNOWN_NUMBER).isPresent()).isFalse();
+        assertThat(this.roomRepository.findByUuid(UUID.randomUUID())).isEmpty();
     }
 
     @Test
@@ -116,102 +106,51 @@ public class RoomIntegrationTests implements RoomConstants {
     }
 
     @Test
-    public void findRooms_ShouldReturnFilteredRoomList_WhenGivenMovieUuid() {
-        RoomDB room1 = new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
-        RoomDB room2 = new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS+10, NORMAL_COLS+20);
-        MovieDB movie = this.movieRepository.save(new MovieDB("A NORMAL TITLE"));
-
-        room1.setMovie(movie);
-        this.roomRepository.saveAll(Arrays.asList(room1, room2));
-        this.entityManager.refresh(movie);
-
-        List<RoomDTO> actual = this.roomService.findRooms(movie.getUuid());
-        List<RoomDTO> expected = Collections.singletonList(new RoomDTO(room1));
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
     public void createRoom_ShouldReturnPersistedRoom_WhenGivenRoomProperties() {
         RoomDTO expected = this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS);
         Optional<RoomDTO> actual = this.roomRepository.findByUuid(expected.getUuid()).map(RoomDTO::new);
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void createRoom_ShouldNotPersistRoom_WhenGivenInvalidRoomProperties() {
-        this.assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(number -> {
-            this.roomService.createRoom(number, NORMAL_ROWS, NORMAL_COLS);
-        });
+    public void createRoom_ShouldNotPersistRoom_WhenGivenInvalidRoomNumber() {
+        if (!this.roomRepository.findByNumber(NORMAL_NUMBER+1).isPresent())
+            this.roomRepository.save(new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS, NORMAL_COLS));
 
-        this.assertShouldNotPersistRoom_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
-            this.roomService.createRoom(NORMAL_NUMBER, nbRows, nbCols);
-        });
+        List<RoomDB> expected = this.roomRepository.findAll();
+
+        for (int number : Arrays.asList(NEGATIVE_NUMBER, ZERO_NUMBER, NORMAL_NUMBER+1)) {
+            assertThatExceptionOfType(InvalidRoomException.class)
+                    .isThrownBy(() -> this.roomService.createRoom(number, NORMAL_ROWS, NORMAL_COLS));
+
+            List<RoomDB> actual = this.roomRepository.findAll();
+
+            assertThat(actual.size()).isEqualTo(expected.size());
+            assertThat(actual).containsOnlyOnceElementsOf(expected);
+        }
+    }
+
+    @Test
+    public void createRoom_ShouldNotPersistRoom_WhenGivenInvalidRoomCapacity() {
+        List<RoomDB> expected = this.roomRepository.findAll();
+
+        for (Map.Entry<Integer, Integer> entry : INVALID_ROOM_CAPACITIES) {
+            assertThatExceptionOfType(InvalidRoomException.class)
+                    .isThrownBy(() -> this.roomService.createRoom(NORMAL_NUMBER, entry.getKey(), entry.getValue()));
+
+            List<RoomDB> actual = this.roomRepository.findAll();
+
+            assertThat(actual.size()).isEqualTo(expected.size());
+            assertThat(actual).containsOnlyOnceElementsOf(expected);
+        }
     }
 
     @Test
     public void createRoom_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.roomService.createRoom(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS),
-                () -> this.loginAs(SecurityRole.CUSTOMER),
-                () -> this.logout()
-        );
-    }
-
-    @Test
-    public void updateRoomNumber_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomNumber() {
-        UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
-
-        Optional<RoomDTO> expected = this.roomService.updateRoomNumber(uuid, NORMAL_NUMBER+1);
-        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
-
-        assertThat(actual).isEqualTo(expected);
-    }
-
-    @Test
-    public void updateRoomNumber_ShouldNotPersistRoom_WhenGivenInvalidRoomNumber() {
-        UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
-
-        this.assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(number -> {
-            this.roomService.updateRoomNumber(uuid, number);
-        });
-    }
-
-    @Test
-    public void updateRoomNumber_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.roomService.updateRoomNumber(UUID.randomUUID(), UNKNOWN_NUMBER),
-                () -> this.loginAs(SecurityRole.CUSTOMER),
-                () -> this.logout()
-        );
-    }
-
-    @Test
-    public void updateRoomCapacity_ShouldReturnModifiedRoom_WhenGivenUuidAndRoomCapacity() {
-        UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
-
-        Optional<RoomDTO> expected = this.roomService.updateRoomCapacity(uuid, NORMAL_ROWS+10, NORMAL_COLS+20);
-        Optional<RoomDTO> actual = this.roomRepository.findByUuid(uuid).map(RoomDTO::new);
-
-        assertThat(actual).isEqualTo(expected);
-    }
-
-    @Test
-    public void updateRoomCapacity_ShouldNotPersistRoom_WhenGivenInvalidRoomCapacity() {
-        UUID uuid = this.roomRepository.save(new RoomDB(NORMAL_NUMBER, NORMAL_ROWS, NORMAL_COLS)).getUuid();
-
-        this.assertShouldNotPersistRoom_WhenGivenInvalidRoomCapacity((nbRows, nbCols) -> {
-            this.roomService.updateRoomCapacity(uuid, nbRows, nbCols);
-        });
-    }
-
-    @Test
-    public void updateRoomCapacity_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.roomService.updateRoomCapacity(UUID.randomUUID(), NEGATIVE_ROWS, NEGATIVE_COLS),
                 () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
@@ -226,7 +165,7 @@ public class RoomIntegrationTests implements RoomConstants {
         RoomDTO expected = new RoomDTO(room);
         Optional<RoomDTO> actual = this.roomService.updateRoomMovie(room.getUuid(), movie.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
@@ -243,7 +182,7 @@ public class RoomIntegrationTests implements RoomConstants {
 
         Optional<RoomDB> actual = this.roomRepository.findByUuid(room.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
@@ -263,7 +202,7 @@ public class RoomIntegrationTests implements RoomConstants {
         this.roomService.removeRoom(room.getUuid());
         Optional<RoomDB> actual = this.roomRepository.findByUuid(room.getUuid());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
@@ -273,39 +212,6 @@ public class RoomIntegrationTests implements RoomConstants {
                 () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );
-    }
-
-    private void assertShouldNotPersistRoom_WhenGivenInvalidRoomNumber(CallableOneArgument<Integer> callable) {
-        if (!this.roomRepository.findByNumber(NORMAL_NUMBER+1).isPresent())
-            this.roomRepository.save(new RoomDB(NORMAL_NUMBER+1, NORMAL_ROWS, NORMAL_COLS));
-
-        List<RoomDB> expected = this.roomRepository.findAll();
-
-        for (int number : Arrays.asList(NEGATIVE_NUMBER, ZERO_NUMBER, NORMAL_NUMBER+1)) {
-            assertThatExceptionOfType(InvalidRoomException.class)
-                    .isThrownBy(() -> callable.call(number));
-
-            List<RoomDB> actual = this.roomRepository.findAll();
-
-            assertThat(actual.size()).isEqualTo(expected.size());
-            assertThat(actual).containsOnlyOnceElementsOf(expected);
-        }
-    }
-
-    private void assertShouldNotPersistRoom_WhenGivenInvalidRoomCapacity(
-            CallableTwoArguments<Integer, Integer> callable
-    ) {
-        List<RoomDB> expected = this.roomRepository.findAll();
-
-        for (Map.Entry<Integer, Integer> entry : INVALID_ROOM_CAPACITIES) {
-            assertThatExceptionOfType(InvalidRoomException.class)
-                    .isThrownBy(() -> callable.call(entry.getKey(), entry.getValue()));
-
-            List<RoomDB> actual = this.roomRepository.findAll();
-
-            assertThat(actual.size()).isEqualTo(expected.size());
-            assertThat(actual).containsOnlyOnceElementsOf(expected);
-        }
     }
 
     private void loginAs(SecurityRole role) {

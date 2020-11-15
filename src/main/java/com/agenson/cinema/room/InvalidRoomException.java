@@ -1,6 +1,5 @@
 package com.agenson.cinema.room;
 
-
 public class InvalidRoomException extends RuntimeException {
 
     public enum Type {

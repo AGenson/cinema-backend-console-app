@@ -9,14 +9,12 @@ import com.agenson.cinema.user.UserDB;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -48,97 +46,16 @@ public class TicketServiceUnitTests {
     @InjectMocks
     private TicketService ticketService;
 
-    private UserDB defaultUser;
-
     private RoomDB defaultRoom;
 
     private OrderDB defaultOrder;
 
     @BeforeEach
     public void setup() {
-        this.defaultUser = new UserDB("username", new BCryptPasswordEncoder().encode("password"));
+        UserDB defaultUser = new UserDB("username", new BCryptPasswordEncoder().encode("password"));
+
         this.defaultRoom = new RoomDB(99, 10, 20);
-        this.defaultOrder = new OrderDB(this.defaultUser);
-    }
-
-    @Test
-    public void findTicket_ShouldReturnTicket_WhenGivenUuid() {
-        TicketDB ticket = new TicketDB(this.defaultRoom, null, Seat.fromString("A01"));
-
-        when(this.ticketRepository.findByUuid(ticket.getUuid())).thenReturn(Optional.of(ticket));
-
-        TicketDetailsDTO expected = new TicketDetailsDTO(ticket);
-        Optional<TicketDetailsDTO> actual = this.ticketService.findTicket(ticket.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void findTicket_ShouldReturnNull_WhenGivenUnknownUuid() {
-        when(this.ticketRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
-
-        assertThat(this.ticketService.findTicket(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.ticketService.findTicket(null).isPresent()).isFalse();
-    }
-
-    @Test
-    public void findTickets_ShouldReturnTicketList() {
-        List<TicketDB> ticketList = Arrays.asList(
-                new TicketDB(this.defaultRoom, null, Seat.fromString("A01")),
-                new TicketDB(this.defaultRoom, null, Seat.fromString("A02")));
-
-        when(this.ticketRepository.findAll()).thenReturn(ticketList);
-
-        List<TicketDetailsDTO> actual = this.ticketService.findTickets();
-        List<TicketDetailsDTO> expected = ticketList.stream().map(TicketDetailsDTO::new).collect(Collectors.toList());
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
-    public void findOrderTickets_ShouldReturnFilteredTicketList_WhenGivenOrderUuid() {
-        OrderDB order1 = new OrderDB(this.defaultUser);
-        OrderDB order2 = new OrderDB(this.defaultUser);
-
-        TicketDB ticket1 = new TicketDB(this.defaultRoom, order1, Seat.fromString("A01"));
-        TicketDB ticket2 = new TicketDB(this.defaultRoom, order2, Seat.fromString("A02"));
-        List<TicketDB> ticketList = Arrays.asList(ticket1, ticket2);
-
-        order1.setTickets(ticketList.stream()
-                .filter(ticket -> ticket.getOrder() == order1)
-                .collect(Collectors.toList()));
-
-        when(this.orderRepository.findByUuid(order1.getUuid())).thenReturn(Optional.of(order1));
-
-        List<TicketDetailsDTO> actual = this.ticketService.findOrderTickets(order1.getUuid());
-        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
-    public void findRoomTickets_ShouldReturnFilteredTicketList_WhenGivenRoomUuid() {
-        RoomDB room1 = new RoomDB(1, 10, 20);
-        RoomDB room2 = new RoomDB(2, 20, 30);
-
-        TicketDB ticket1 = new TicketDB(room1, null, Seat.fromString("A01"));
-        TicketDB ticket2 = new TicketDB(room2, null, Seat.fromString("A02"));
-        List<TicketDB> ticketList = Arrays.asList(ticket1, ticket2);
-
-        room1.setTickets(ticketList.stream()
-                .filter(ticket -> ticket.getRoom() == room1)
-                .collect(Collectors.toList()));
-
-        when(this.roomRepository.findByUuid(room1.getUuid())).thenReturn(Optional.of(room1));
-
-        List<TicketDetailsDTO> actual = this.ticketService.findRoomTickets(room1.getUuid());
-        List<TicketDetailsDTO> expected = Collections.singletonList(new TicketDetailsDTO(ticket1));
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
+        this.defaultOrder = new OrderDB(defaultUser);
     }
 
     @Test
