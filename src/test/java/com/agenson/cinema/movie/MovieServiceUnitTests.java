@@ -35,34 +35,24 @@ class MovieServiceUnitTests implements MovieConstants {
     private MovieService movieService;
 
     @Test
-    public void findMovie_ShouldReturnMovie_WhenGivenUuidOrTitle() {
+    public void findMovie_ShouldReturnMovie_WhenGivenUuid() {
         MovieDB movie = new MovieDB(NORMAL_TITLE);
 
         when(this.movieRepository.findByUuid(movie.getUuid())).thenReturn(Optional.of(movie));
-        when(this.movieRepository.findByTitle(movie.getTitle())).thenReturn(Optional.of(movie));
 
         MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.findMovie(movie.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-
-        actual = this.movieService.findMovie(movie.getTitle());
-
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void findMovie_ShouldReturnNull_WhenGivenUnknownUuidOrTitle() {
+    public void findMovie_ShouldReturnNull_WhenGivenUnknownUuid() {
         when(this.movieRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
-        when(this.movieRepository.findByTitle(anyString())).thenReturn(Optional.empty());
 
-        assertThat(this.movieService.findMovie(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.movieService.findMovie((UUID) null).isPresent()).isFalse();
-
-        assertThat(this.movieService.findMovie(UNKNOWN_TITLE).isPresent()).isFalse();
-        assertThat(this.movieService.findMovie((String) null).isPresent()).isFalse();
+        assertThat(this.movieService.findMovie(UUID.randomUUID())).isEmpty();
+        assertThat(this.movieService.findMovie(null)).isEmpty();
     }
 
     @Test
@@ -109,7 +99,7 @@ class MovieServiceUnitTests implements MovieConstants {
         MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.updateMovieTitle(expected.getUuid(), NORMAL_TITLE.toLowerCase());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 

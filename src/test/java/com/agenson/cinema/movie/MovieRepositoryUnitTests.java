@@ -37,7 +37,7 @@ class MovieRepositoryUnitTests implements MovieConstants {
     public void findByUuid_ShouldReturnMovie_WhenGivenPersistedUuid() {
         Optional<MovieDB> actual = this.movieRepository.findByUuid(this.expected.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -45,14 +45,14 @@ class MovieRepositoryUnitTests implements MovieConstants {
     public void findByUuid_ShouldReturnNull_WhenGivenUnknownUuid() {
         Optional<MovieDB> actual = this.movieRepository.findByUuid(UUID.randomUUID());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
     public void findByTitle_ShouldReturnMovie_WhenGivenPersistedTitle() {
         Optional<MovieDB> actual = this.movieRepository.findByTitle(this.expected.getTitle());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -60,7 +60,7 @@ class MovieRepositoryUnitTests implements MovieConstants {
     public void findByTitle_ShouldReturnNull_WhenGivenUnknownTitle() {
         Optional<MovieDB> actual = this.movieRepository.findByTitle(UNKNOWN_TITLE);
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
@@ -69,7 +69,7 @@ class MovieRepositoryUnitTests implements MovieConstants {
 
         Optional<MovieDB> actual = this.movieRepository.findById(this.expected.getId());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test

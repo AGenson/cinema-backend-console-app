@@ -1,10 +1,13 @@
 package com.agenson.cinema.movie;
 
-import com.agenson.cinema.room.RoomService;
+import com.agenson.cinema.order.OrderRepository;
+import com.agenson.cinema.room.RoomRepository;
 import com.agenson.cinema.security.restriction.RestrictToStaff;
 import com.agenson.cinema.ticket.TicketDB;
+import com.agenson.cinema.ticket.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,14 +20,12 @@ public class MovieService {
 
     private final MovieRepository movieRepository;
 
-    private final RoomService roomService;
+    private final OrderRepository orderRepository;
+
+    private final TicketRepository ticketRepository;
 
     public Optional<MovieDTO> findMovie(UUID uuid) {
         return this.movieRepository.findByUuid(uuid).map(MovieDTO::new);
-    }
-
-    public Optional<MovieDTO> findMovie(String title) {
-        return this.movieRepository.findByTitle(this.formatTitle(title)).map(MovieDTO::new);
     }
 
     public List<MovieDTO> findMovies() {
@@ -48,12 +49,20 @@ public class MovieService {
         });
     }
 
+    @Transactional
     @RestrictToStaff
     public void removeMovie(UUID uuid) {
         this.movieRepository.findByUuid(uuid).ifPresent(movie -> {
-            movie.getRooms().forEach(room -> this.roomService.updateRoomMovie(room.getUuid(), null));
-            this.movieRepository.delete(movie);
+            movie.getRooms().forEach(room -> {
+                room.getTickets().stream()
+                        .peek(ticket -> this.ticketRepository.deleteByUuid(ticket.getUuid()))
+                        .map(TicketDB::getOrder).distinct().forEach(order -> {
+                    this.orderRepository.deleteByUuid(order.getUuid());
+                });
+            });
         });
+
+        this.movieRepository.deleteByUuid(uuid);
     }
 
     private void validateTitle(UUID uuid, String title) {

@@ -50,12 +50,10 @@ public class MovieIntegrationTests implements MovieConstants {
 
     @BeforeEach
     public void setup() {
-        if (this.defaultUser == null) {
-            UserDB user = new UserDB("username", this.encoder.encode("password"));
+        UserDB user = new UserDB("username", this.encoder.encode("password"));
 
-            this.entityManager.persist(user);
-            this.defaultUser = user;
-        }
+        this.entityManager.persist(user);
+        this.defaultUser = user;
 
         this.loginAs(SecurityRole.STAFF);
     }
@@ -66,27 +64,21 @@ public class MovieIntegrationTests implements MovieConstants {
     }
 
     @Test
-    public void findMovie_ShouldReturnPersistedMovie_WhenGivenUuidOrTitle() {
+    public void findMovie_ShouldReturnPersistedMovie_WhenGivenUuid() {
         MovieDB movie = this.movieRepository.save(new MovieDB(NORMAL_TITLE));
 
         MovieDTO expected = new MovieDTO(movie);
         Optional<MovieDTO> actual = this.movieService.findMovie(movie.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-
-        actual = this.movieService.findMovie(movie.getTitle());
-
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
     @Test
-    public void findMovie_ShouldReturnNull_WhenNotFoundWithUuidOrTitle() {
+    public void findMovie_ShouldReturnNull_WhenNotFoundWithUuid() {
         this.movieRepository.save(new MovieDB(NORMAL_TITLE));
 
-        assertThat(this.movieService.findMovie(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.movieService.findMovie(UNKNOWN_TITLE).isPresent()).isFalse();
+        assertThat(this.movieService.findMovie(UUID.randomUUID())).isEmpty();
     }
 
     @Test
@@ -111,7 +103,7 @@ public class MovieIntegrationTests implements MovieConstants {
         MovieDTO expected = this.movieService.createMovie(NORMAL_TITLE);
         Optional<MovieDTO> actual = this.movieRepository.findByUuid(expected.getUuid()).map(MovieDTO::new);
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(expected);
     }
 
@@ -165,7 +157,7 @@ public class MovieIntegrationTests implements MovieConstants {
 
         this.movieService.removeMovie(uuid);
 
-        assertThat(this.movieRepository.findByUuid(uuid).isPresent()).isFalse();
+        assertThat(this.movieRepository.findByUuid(uuid)).isEmpty();
     }
 
     @Test

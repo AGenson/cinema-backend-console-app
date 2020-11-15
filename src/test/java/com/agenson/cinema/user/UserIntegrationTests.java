@@ -70,6 +70,15 @@ public class UserIntegrationTests implements UserConstants {
     }
 
     @Test
+    public void findUser_ShouldThrowSecurityException_WhenNotLoggedInAsUser() {
+        StaffSecurityAssertion.assertShouldThrowSecurityException(
+                () -> this.userService.findUser(UUID.randomUUID()),
+                () -> this.loginAs(SecurityRole.STAFF),
+                () -> this.logout()
+        );
+    }
+
+    @Test
     public void findUsers_ShouldReturnUserList() {
         List<UserDB> userList = Arrays.asList(
                 new UserDB(NORMAL_USERNAME, this.defaultPasswordEncoded),
