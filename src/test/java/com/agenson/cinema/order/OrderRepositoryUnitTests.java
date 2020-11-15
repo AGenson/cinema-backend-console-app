@@ -45,7 +45,7 @@ public class OrderRepositoryUnitTests {
     public void findByUuid_ShouldReturnOrder_WhenGivenPersistedUuid() {
         Optional<OrderDB> actual = this.orderRepository.findByUuid(this.expected.getUuid());
 
-        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual).isNotEmpty();
         assertThat(actual.get()).isEqualTo(this.expected);
     }
 
@@ -53,7 +53,7 @@ public class OrderRepositoryUnitTests {
     public void findByUuid_ShouldReturnNull_WhenGivenUnknownUuid() {
         Optional<OrderDB> actual = this.orderRepository.findByUuid(UUID.randomUUID());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test
@@ -62,7 +62,7 @@ public class OrderRepositoryUnitTests {
 
         Optional<OrderDB> actual = this.orderRepository.findById(this.expected.getId());
 
-        assertThat(actual.isPresent()).isFalse();
+        assertThat(actual).isEmpty();
     }
 
     @Test

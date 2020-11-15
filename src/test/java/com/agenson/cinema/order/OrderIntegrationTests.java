@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class OrderIntegrationTests {
+
+    @Autowired
+    private BCryptPasswordEncoder encoder;
 
     @Autowired
     private SecurityService securityService;
@@ -40,19 +42,12 @@ public class OrderIntegrationTests {
 
     private UserDB defaultUser;
 
-    private UserDB anotherUser;
-
     @BeforeEach
     public void setup() {
-        String encodedPassword = new BCryptPasswordEncoder().encode("password");
-        UserDB user1 = new UserDB("username", encodedPassword);
-        UserDB user2 = new UserDB("another", encodedPassword);
+        UserDB user = new UserDB("username", this.encoder.encode("password"));
 
-        this.entityManager.persist(user1);
-        this.defaultUser = user1;
-
-        this.entityManager.persist(user2);
-        this.anotherUser = user2;
+        this.entityManager.persist(user);
+        this.defaultUser = user;
 
         this.loginAs(SecurityRole.STAFF);
     }
@@ -60,73 +55,6 @@ public class OrderIntegrationTests {
     @AfterEach
     public void logout() {
         this.securityService.logout();
-    }
-
-    @Test
-    public void findOrder_ShouldReturnPersistedRoom_WhenGivenUuid() {
-        OrderDB order = this.orderRepository.save(new OrderDB(this.defaultUser));
-
-        OrderDTO expected = new OrderDTO(order);
-        Optional<OrderDTO> actual = this.orderService.findOrder(order.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void findOrder_ShouldReturnNull_WhenNotFoundWithUuid() {
-        assertThat(this.orderService.findOrder(UUID.randomUUID()).isPresent()).isFalse();
-    }
-
-    @Test
-    public void findOrders_ShouldReturnOrderList() {
-        List<OrderDB> orderList = Arrays.asList(
-                new OrderDB(this.defaultUser),
-                new OrderDB(this.defaultUser)
-        );
-
-        assertThat(this.orderRepository.findAll().size()).isZero();
-
-        this.orderRepository.saveAll(orderList);
-
-        List<OrderDTO> actual = this.orderService.findOrders();
-        List<OrderDTO> expected = orderList.stream().map(OrderDTO::new).collect(Collectors.toList());
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
-    public void findOrders_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.orderService.findOrders(),
-                () -> this.loginAs(SecurityRole.CUSTOMER),
-                () -> this.logout()
-        );
-    }
-
-    @Test
-    public void findOrders_ShouldReturnFilteredRoomList_WhenGivenUserUuid() {
-        OrderDB order1 = new OrderDB(this.defaultUser);
-        OrderDB order2 = new OrderDB(this.anotherUser);
-
-        this.orderRepository.saveAll(Arrays.asList(order1, order2));
-        this.entityManager.refresh(this.defaultUser);
-
-        List<OrderDTO> actual = this.orderService.findOrders(this.defaultUser.getUuid());
-        List<OrderDTO> expected = Collections.singletonList(new OrderDTO(order1));
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
-    public void findOrders_ShouldThrowSecurityException_WhenNotCalledByUser() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.orderService.findOrders(UUID.randomUUID()),
-                () -> this.loginAs(SecurityRole.STAFF),
-                () -> this.logout()
-        );
     }
 
     @Test
@@ -142,25 +70,6 @@ public class OrderIntegrationTests {
     public void createOrder_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
         StaffSecurityAssertion.assertShouldThrowSecurityException(
                 () -> this.orderService.createOrder(UUID.randomUUID()),
-                () -> this.loginAs(SecurityRole.CUSTOMER),
-                () -> this.logout()
-        );
-    }
-
-    @Test
-    public void removeOrder_ShouldRemoveOrder_WhenGivenUuid() {
-        OrderDB order = this.orderRepository.save(new OrderDB(this.defaultUser));
-
-        this.orderService.removeOrder(order.getUuid());
-        Optional<OrderDB> actual = this.orderRepository.findByUuid(order.getUuid());
-
-        assertThat(actual.isPresent()).isFalse();
-    }
-
-    @Test
-    public void removeOrder_ShouldThrowSecurityException_WhenNotLoggedInAsStaff() {
-        StaffSecurityAssertion.assertShouldThrowSecurityException(
-                () -> this.orderService.removeOrder(UUID.randomUUID()),
                 () -> this.loginAs(SecurityRole.CUSTOMER),
                 () -> this.logout()
         );

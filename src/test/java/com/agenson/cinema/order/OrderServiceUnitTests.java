@@ -10,7 +10,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -20,10 +19,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceUnitTests {
-
-    private static final String ENCODED_PASSWORD = new BCryptPasswordEncoder().encode("password");
-
-    private static final UserDB DEFAULT_USER = new UserDB("username", ENCODED_PASSWORD);
 
     @Mock
     private OrderRepository orderRepository;
@@ -35,66 +30,14 @@ public class OrderServiceUnitTests {
     private OrderService orderService;
 
     @Test
-    public void findOrder_ShouldReturnOrder_WhenGivenUuid() {
-        OrderDB order = new OrderDB(DEFAULT_USER);
-
-        when(this.orderRepository.findByUuid(order.getUuid())).thenReturn(Optional.of(order));
-
-        OrderDTO expected = new OrderDTO(order);
-        Optional<OrderDTO> actual = this.orderService.findOrder(order.getUuid());
-
-        assertThat(actual.isPresent()).isTrue();
-        assertThat(actual.get()).isEqualTo(expected);
-    }
-
-    @Test
-    public void findOrder_ShouldReturnNull_WhenGivenUnknownUuid() {
-        when(this.orderRepository.findByUuid(any(UUID.class))).thenReturn(Optional.empty());
-
-        assertThat(this.orderService.findOrder(UUID.randomUUID()).isPresent()).isFalse();
-        assertThat(this.orderService.findOrder(null).isPresent()).isFalse();
-    }
-
-    @Test
-    public void findOrders_ShouldReturnOrderList() {
-        List<OrderDB> orderList = Arrays.asList(
-                new OrderDB(DEFAULT_USER),
-                new OrderDB(DEFAULT_USER));
-
-        when(this.orderRepository.findAll()).thenReturn(orderList);
-
-        List<OrderDTO> actual = this.orderService.findOrders();
-        List<OrderDTO> expected = orderList.stream().map(OrderDTO::new).collect(Collectors.toList());
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
-    public void findOrders_ShouldReturnFilteredOrderList_WhenGivenUserUuid() {
-        UserDB user1 = new UserDB("username", ENCODED_PASSWORD);
-        UserDB user2 = new UserDB("another", ENCODED_PASSWORD);
-
-        OrderDB order1 = new OrderDB(user1);
-        OrderDB order2 = new OrderDB(user2);
-        List<OrderDB> orderList = Arrays.asList(order1, order2);
-
-        user1.setOrders(orderList.stream().filter(order -> order.getUser().equals(user1)).collect(Collectors.toList()));
-        when(this.userRepository.findByUuid(user1.getUuid())).thenReturn(Optional.of(user1));
-
-        List<OrderDTO> actual = this.orderService.findOrders(user1.getUuid());
-        List<OrderDTO> expected = Collections.singletonList(new OrderDTO(order1));
-
-        assertThat(actual.size()).isEqualTo(expected.size());
-        assertThat(actual).containsOnlyOnceElementsOf(expected);
-    }
-
-    @Test
     public void createOrder_ShouldReturnNewOrder_WhenGivenUserUuid() {
-        when(this.orderRepository.save(any(OrderDB.class))).then(returnsFirstArg());
-        when(this.userRepository.findByUuid(DEFAULT_USER.getUuid())).thenReturn(Optional.of(DEFAULT_USER));
+        String encodedPassword = new BCryptPasswordEncoder().encode("password");
+        UserDB user = new UserDB("username", encodedPassword);
 
-        OrderDTO actual = this.orderService.createOrder(DEFAULT_USER.getUuid());
+        when(this.orderRepository.save(any(OrderDB.class))).then(returnsFirstArg());
+        when(this.userRepository.findByUuid(user.getUuid())).thenReturn(Optional.of(user));
+
+        OrderDTO actual = this.orderService.createOrder(user.getUuid());
 
         assertThat(actual.getUuid()).isNotNull();
     }
